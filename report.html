@@ -22,6 +22,7 @@ h1{font-family:Fraunces,Georgia,serif;font-weight:800;color:#fff;margin:0;font-s
 .top .act{display:flex;gap:6px}
 .top .act button{border:0;background:rgba(255,255,255,.9);color:#3f6b2a;border-radius:99px;padding:6px 12px;font:600 .82rem Inter,sans-serif;cursor:pointer}
 .wrap{max-width:1000px;margin:-18px auto 0;padding:0 16px 48px;display:grid;gap:14px}
+.wrap>*,#app>*{min-width:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 12px 34px -26px rgba(30,60,10,.5)}
 h2{font-family:Fraunces,Georgia,serif;font-size:1.12rem;margin:0 0 12px}
 label{display:block;font-size:.82rem;font-weight:600;margin-bottom:3px}
@@ -78,6 +79,11 @@ tfoot td{font-weight:600}
 .form{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:8px;align-items:end;margin-bottom:14px}
 @media (max-width:700px){.form{grid-template-columns:1fr 1fr}}
 .x{border:0;background:transparent;color:var(--muted);font-size:1.1rem;cursor:pointer;width:28px;height:28px;border-radius:50%}
+.delb{border:1px solid color-mix(in srgb,var(--err) 45%,transparent);background:transparent;color:var(--err);border-radius:8px;padding:5px 10px;font:600 .8rem Inter,sans-serif;cursor:pointer;white-space:nowrap}
+.delb:hover{background:color-mix(in srgb,var(--err) 12%,transparent)}
+.fb{display:flex;gap:8px}
+.fb .btn{flex:1}
+@media (max-width:700px){.fb{grid-column:1/-1}}
 .x:hover{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err)}
 .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:.78rem;font-weight:600;background:var(--bg)}
 .pill.i{background:color-mix(in srgb,var(--yolk) 25%,var(--bg))}
@@ -148,10 +154,10 @@ tfoot td{font-weight:600}
       <!-- CARICHI -->
       <div data-p="car" hidden>
         <form class="form" id="fl">
-          <div><label for="lq">Uova</label><input id="lq" type="number" inputmode="numeric" placeholder="es. 30 (o -3 per uova rotte)"></div>
+          <div><label for="lq">Uova</label><input id="lq" type="number" inputmode="numeric" min="1" placeholder="es. 30"></div>
           <div><label for="ld">Giorno</label><input id="ld" type="date"></div>
-          <div style="grid-column:span 2"><label for="ln">Note</label><input id="ln" maxlength="200"></div>
-          <button class="btn">Aggiungi</button>
+          <div style="grid-column:span 2"><label for="ln">Note <span style="font-weight:400;color:var(--muted)">(es. rotte, consumate)</span></label><input id="ln" maxlength="200"></div>
+          <div class="fb"><button class="btn">+ Aggiungi</button><button class="btn red" type="button" id="lminus">− Togli uova</button></div>
         </form>
         <div class="sum" id="lsum"></div>
         <div class="tw"><table><thead><tr><th>Giorno</th><th>Chi</th><th>Note</th><th class="n">Uova</th><th></th></tr></thead><tbody id="ltb"></tbody></table></div>
@@ -293,7 +299,7 @@ function renderLoads(){
   const booked = D.orders.reduce((t,o)=>t+o.uova,0), tot = L.reduce((t,l)=>t+l.uova,0);
   $('lsum').innerHTML = `<span>Totale caricate: <b>${tot}</b></span><span>Prenotate: <b>${booked}</b></span><span>Disponibili: <b>${D.available}</b></span>` +
     Object.entries(by).map(([u,n])=>`<span>${esc(u)}: ${n}</span>`).join('');
-  $('ltb').innerHTML = L.map(l=>`<tr><td class="d">${dIt(l.data)}</td><td>${esc(l.utente)}</td><td class="note">${esc(l.note)}</td><td class="n"><b>${l.uova}</b></td><td class="c"><button class="x" data-del="delLoad" data-id="${esc(l.id)}" aria-label="Cancella">×</button></td></tr>`).join('')
+  $('ltb').innerHTML = L.map(l=>`<tr><td class="d">${dIt(l.data)}</td><td>${esc(l.utente)}</td><td class="note">${esc(l.note)}</td><td class="n"><b${l.uova<0?' style="color:var(--err)"':''}>${l.uova}</b></td><td class="c"><button class="delb" data-del="delLoad" data-id="${esc(l.id)}">Elimina</button></td></tr>`).join('')
     || `<tr><td colspan="5" class="empty">Nessun carico di uova.</td></tr>`;
 }
 function renderCosts(){
@@ -355,10 +361,14 @@ $('csv').onclick = () => {
 };
 
 $('ld').value = today(); $('cd').value = today(); $('hd').value = today();
-$('fl').onsubmit = async e => { e.preventDefault();
-  const n = parseInt($('lq').value,10)||0; if(!n) return toast('Scrivi quante uova');
+async function saveLoad(sign){
+  const q = Math.abs(parseInt($('lq').value,10)||0); if(!q) return toast(sign<0 ? 'Scrivi quante uova togliere' : 'Scrivi quante uova');
+  if (sign<0 && !confirm(`Togliere ${q} uova dalle disponibili?`)) return;
+  const n = sign*q;
   try{ const j = await post({action:'load', uova:n, data:$('ld').value, note:$('ln').value.trim()}); if(!j.ok) throw new Error(j.error);
-    $('lq').value=''; $('ln').value=''; await load(); toast(`${n>0?'Aggiunte':'Tolte'} ${Math.abs(n)} uova`); }catch(x){ toast(x.message); } };
+    $('lq').value=''; $('ln').value=''; await load(); toast(`${n>0?'Aggiunte':'Tolte'} ${q} uova`); }catch(x){ toast(x.message); } }
+$('fl').onsubmit = e => { e.preventDefault(); saveLoad(1); };
+$('lminus').onclick = () => saveLoad(-1);
 $('fc').onsubmit = async e => { e.preventDefault();
   const imp = parseFloat($('cimp').value.replace(',','.'))||0, descr=$('cdsc').value.trim();
   if(!descr) return toast('Scrivi una descrizione'); if(imp<=0) return toast('Scrivi l\'importo');
