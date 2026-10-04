@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#3f6b2a">
+<title>OviAmo – La mia area</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f7ec;--card:#fffff9;--ink:#1f2a17;--muted:#61705a;--line:#dbe5cf;--brand:#3f6b2a;--brand-2:#5a8f3a;--yolk:#e8b23a;--err:#a8322a}
+@media (prefers-color-scheme:dark){:root{--bg:#121a0f;--card:#1a2416;--ink:#eaf2e2;--muted:#a7b79d;--line:#2c3a25;--brand:#8cc46a;--brand-2:#a6d686;--yolk:#f0c55a;--err:#f08a80}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif}
+.top{background:linear-gradient(180deg,#8fcbe8 0%,#cfe8ef 45%,#9ccb6a 46%,#5a8f3a 100%);padding:18px 16px 40px;border-radius:0 0 50% 50%/0 0 28px 28px}
+.top .in{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.top img{width:64px;filter:drop-shadow(0 4px 8px rgba(30,50,10,.3))}
+h1{font-family:Fraunces,Georgia,serif;font-weight:800;color:#fff;margin:0;font-size:1.7rem;line-height:1.1;text-shadow:0 2px 10px rgba(30,60,10,.55)}
+.badge{display:inline-block;margin-top:4px;padding:2px 10px;border-radius:99px;background:rgba(255,255,255,.88);color:#3f6b2a;font-size:.78rem;font-weight:600}
+.wrap{max-width:680px;margin:-22px auto 0;padding:0 16px 48px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 12px 34px -24px rgba(30,60,10,.5)}
+h2{font-family:Fraunces,Georgia,serif;font-size:1.15rem;margin:0 0 12px}
+.avail{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.avail b{font-family:Fraunces,Georgia,serif;font-size:2.2rem;line-height:1;color:var(--brand)}
+.avail small{color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:460px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:.85rem;font-weight:600;margin-bottom:4px}
+label .opt{font-weight:400;color:var(--muted)}
+input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus{outline:2px solid var(--yolk);outline-offset:1px;border-color:transparent}
+.field{margin-bottom:12px}
+.big{display:flex;align-items:center;gap:10px}
+.big button{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--brand);font-size:1.4rem;cursor:pointer}
+.big input{text-align:center;font-size:1.3rem;font-weight:600}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.quick button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:99px;padding:5px 12px;font:500 .85rem Inter,sans-serif;cursor:pointer}
+.btn{width:100%;padding:13px;border:0;border-radius:12px;background:linear-gradient(180deg,var(--brand-2),var(--brand));color:#fff;font:600 1rem Inter,sans-serif;cursor:pointer}
+@media (prefers-color-scheme:dark){.btn{color:#13200c}}
+.btn:disabled{opacity:.55}
+.list{display:grid;gap:6px;margin-top:6px}
+.it{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--bg);font-size:.92rem}
+.it .d{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.it .w{color:var(--muted);font-size:.8rem}
+.it b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.x{border:0;background:transparent;color:var(--muted);font-size:1.1rem;cursor:pointer;width:28px;height:28px;border-radius:50%}
+.x:hover{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err)}
+.more{background:none;border:0;color:var(--brand);text-decoration:underline;cursor:pointer;font:inherit;font-size:.9rem;margin-top:6px}
+.empty{color:var(--muted);font-size:.9rem}
+.err{color:var(--err)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="top"><div class="in"><img src="logo.svg" alt=""><div><h1 id="title">OviAmo</h1><span class="badge" id="badge">…</span></div></div></div>
+
+<main class="wrap">
+  <p class="card err" id="err" hidden></p>
+
+  <section class="card avail" id="availBox" hidden>
+    <div><small>Uova disponibili per le prenotazioni</small><br><b id="avail">0</b></div>
+    <svg width="44" height="56" viewBox="0 0 24 30" aria-hidden="true"><defs><radialGradient id="eg" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#fffaf0"/><stop offset=".7" stop-color="#f3e3c4"/><stop offset="1" stop-color="#dcc39a"/></radialGradient></defs><ellipse cx="12" cy="16" rx="10.5" ry="13.5" fill="url(#eg)" stroke="#cfb184"/></svg>
+  </section>
+
+  <section class="card" id="loadCard" hidden>
+    <h2>🥚 Carica le uova raccolte</h2>
+    <form id="fl">
+      <div class="field"><label for="lq">Quante uova?</label>
+        <div class="big"><button type="button" data-d="-1" aria-label="Meno">−</button><input id="lq" type="number" inputmode="numeric" min="1" max="5000" value="0"><button type="button" data-d="1" aria-label="Più">+</button></div>
+        <div class="quick"><button type="button" data-a="6">+6</button><button type="button" data-a="12">+12</button><button type="button" data-a="30">+30</button></div>
+      </div>
+      <div class="grid">
+        <div class="field"><label for="ld">Giorno</label><input id="ld" type="date"></div>
+        <div class="field"><label for="ln">Note <span class="opt">(facoltative)</span></label><input id="ln" maxlength="200"></div>
+      </div>
+      <button class="btn" id="lgo">Aggiungi le uova</button>
+    </form>
+    <h2 style="margin-top:18px" id="lTitle">I tuoi ultimi carichi</h2>
+    <div class="list" id="loads"></div>
+    <button class="more" id="lmore" hidden>Mostra tutti</button>
+  </section>
+
+  <section class="card" id="costCard" hidden>
+    <h2>🌾 Costi (mangime e altro)</h2>
+    <form id="fc">
+      <div class="grid">
+        <div class="field"><label for="cdsc">Descrizione</label><input id="cdsc" maxlength="120" placeholder="Es. mangime 25 kg" list="cdl"><datalist id="cdl"></datalist></div>
+        <div class="field"><label for="cimp">Importo €</label><input id="cimp" inputmode="decimal" placeholder="0,00"></div>
+      </div>
+      <div class="field"><label for="cd">Giorno</label><input id="cd" type="date"></div>
+      <button class="btn" id="cgo">Aggiungi il costo</button>
+    </form>
+    <h2 style="margin-top:18px">Ultimi costi</h2>
+    <div class="list" id="costs"></div>
+    <button class="more" id="cmore" hidden>Mostra tutti</button>
+  </section>
+
+  <section class="card" id="chartCard" hidden>
+    <h2>📈 Vendite e costi</h2>
+    <div id="chart"></div>
+  </section>
+
+  <footer>OviAmo · uova fresche di galline felici</footer>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="grafico.js"></script>
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXhUeNMN3RY65D-oPb6SxqTdgVZuZpA6em0BwmE9yyWn0u5FylQz2FVdI5outJomuK/exec';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const eur = n => (n||0).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
+const dIt = s => { const p=String(s).slice(0,10).split('-'); return p.length===3 ? `${+p[2]}/${+p[1]}/${p[0].slice(2)}` : s; };
+const pad = n => String(n).padStart(2,'0');
+const today = () => { const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+const TK = new URLSearchParams(location.search).get('k') || '';
+let D = null, chart = null, allL = false, allC = false;
+
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2400); }
+const post = body => fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({t:TK,...body})}).then(r=>r.json());
+
+async function load(){
+  try{
+    if(!TK) throw new Error('Questo link non è completo. Chiedi il tuo link personale a chi gestisce OviAmo.');
+    const j = await fetch(SCRIPT_URL+'?action=area&t='+encodeURIComponent(TK)).then(r=>r.json());
+    if(!j.ok) throw new Error(j.error||'Errore');
+    D = j; render();
+  }catch(e){ $('err').hidden=false; $('err').textContent=e.message; $('badge').hidden=true; }
+}
+
+function render(){
+  const inter = D.ruolo === 'intermedio';
+  $('title').textContent = 'Ciao ' + String(D.nome).split(' ')[0] + '!';
+  $('badge').textContent = inter ? 'Uova, costi e grafico' : 'Carico uova';
+  $('avail').textContent = D.available; $('availBox').hidden = false;
+  $('loadCard').hidden = false;
+  $('lTitle').textContent = inter ? 'Ultimi carichi (di tutti)' : 'I tuoi ultimi carichi';
+  const L = [...D.loads].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
+  const lv = allL ? L : L.slice(0,8);
+  $('loads').innerHTML = lv.map(l=>`<div class="it"><span class="d">${dIt(l.data)}</span><span>${inter?esc(l.utente):''}${l.note?` <span class="w">${esc(l.note)}</span>`:''}</span><b>${l.uova} uova</b>${l.utente===D.nome?`<button class="x" data-del="load" data-id="${esc(l.id)}" aria-label="Cancella">×</button>`:'<span></span>'}</div>`).join('') || '<p class="empty">Ancora nessun carico.</p>';
+  $('lmore').hidden = allL || L.length <= 8;
+  if (!inter) return;
+  $('costCard').hidden = false; $('chartCard').hidden = false;
+  const C = [...D.costs].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
+  $('costs').innerHTML = (allC?C:C.slice(0,8)).map(c=>`<div class="it"><span class="d">${dIt(c.data)}</span><span>${esc(c.descr)} <span class="w">${esc(c.utente)}</span></span><b>${eur(c.euro)}</b>${c.utente===D.nome?`<button class="x" data-del="cost" data-id="${esc(c.id)}" aria-label="Cancella">×</button>`:'<span></span>'}</div>`).join('') || '<p class="empty">Ancora nessun costo.</p>';
+  $('cmore').hidden = allC || C.length <= 8;
+  $('cdl').innerHTML = [...new Set(C.map(c=>c.descr))].slice(0,12).map(s=>`<option value="${esc(s)}">`).join('');
+  const cd = {sales:D.sales, costs:D.costs, loads:D.loads};
+  if (chart) chart.update(cd); else chart = OviChart($('chart'), cd);
+}
+
+// ----- carico uova -----
+$('ld').value = today(); $('cd').value = today();
+document.querySelector('.big').onclick = e => { const b=e.target.closest('button'); if(!b) return; $('lq').value = Math.max(0,(+$('lq').value||0) + +b.dataset.d); };
+document.querySelector('.quick').onclick = e => { const b=e.target.closest('button'); if(!b) return; $('lq').value = (+$('lq').value||0) + +b.dataset.a; };
+$('fl').onsubmit = async e => {
+  e.preventDefault();
+  const n = parseInt($('lq').value,10)||0;
+  if (n<1) return toast('Scrivi quante uova');
+  const b=$('lgo'); b.disabled=true;
+  try{
+    const j = await post({action:'load', uova:n, data:$('ld').value, note:$('ln').value.trim()});
+    if(!j.ok) throw new Error(j.error);
+    toast(`Aggiunte ${n} uova. Disponibili: ${j.available}`);
+    $('lq').value=0; $('ln').value=''; await load();
+  }catch(x){ toast(x.message||'Non salvato, riprova'); }
+  finally{ b.disabled=false; }
+};
+
+// ----- costi -----
+$('fc').onsubmit = async e => {
+  e.preventDefault();
+  const imp = parseFloat($('cimp').value.replace(',','.'))||0, descr=$('cdsc').value.trim();
+  if(!descr) return toast('Scrivi una descrizione');
+  if(imp<=0) return toast('Scrivi l\'importo');
+  const b=$('cgo'); b.disabled=true;
+  try{
+    const j = await post({action:'cost', importo:imp, descr, data:$('cd').value});
+    if(!j.ok) throw new Error(j.error);
+    toast('Costo aggiunto: '+eur(imp)); $('cimp').value=''; $('cdsc').value=''; await load();
+  }catch(x){ toast(x.message||'Non salvato, riprova'); }
+  finally{ b.disabled=false; }
+};
+
+// ----- cancellazioni -----
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-del]'); if(!b) return;
+  if(!confirm('Cancellare questa riga?')) return;
+  b.disabled = true;
+  try{
+    const j = await post({action: b.dataset.del==='load' ? 'delLoad' : 'delCost', id:b.dataset.id});
+    if(!j.ok) throw new Error(j.error||'Non cancellato');
+    toast('Cancellato'); await load();
+  }catch(x){ b.disabled=false; toast(x.message); }
+});
+$('lmore').onclick = () => { allL=true; render(); };
+$('cmore').onclick = () => { allC=true; render(); };
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#3f6b2a">
+<title>OviAmo – Report</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f7ec;--card:#fffff9;--ink:#1f2a17;--muted:#61705a;--line:#dbe5cf;--brand:#3f6b2a;--brand-2:#5a8f3a;--yolk:#e8b23a;--err:#a8322a}
+@media (prefers-color-scheme:dark){:root{--bg:#121a0f;--card:#1a2416;--ink:#eaf2e2;--muted:#a7b79d;--line:#2c3a25;--brand:#8cc46a;--brand-2:#a6d686;--yolk:#f0c55a;--err:#f08a80}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+.top{background:linear-gradient(180deg,#8fcbe8 0%,#cfe8ef 45%,#9ccb6a 46%,#5a8f3a 100%);padding:16px 16px 34px;border-radius:0 0 50% 50%/0 0 24px 24px}
+.top .in{max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.top img{width:56px;filter:drop-shadow(0 4px 8px rgba(30,50,10,.3))}
+h1{font-family:Fraunces,Georgia,serif;font-weight:800;color:#fff;margin:0;font-size:1.6rem;line-height:1.1;text-shadow:0 2px 10px rgba(30,60,10,.55);flex:1}
+.top .act{display:flex;gap:6px}
+.top .act button{border:0;background:rgba(255,255,255,.9);color:#3f6b2a;border-radius:99px;padding:6px 12px;font:600 .82rem Inter,sans-serif;cursor:pointer}
+.wrap{max-width:1000px;margin:-18px auto 0;padding:0 16px 48px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 12px 34px -26px rgba(30,60,10,.5)}
+h2{font-family:Fraunces,Georgia,serif;font-size:1.12rem;margin:0 0 12px}
+label{display:block;font-size:.82rem;font-weight:600;margin-bottom:3px}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--yolk);outline-offset:1px;border-color:transparent}
+input[type=checkbox]{width:18px;height:18px;padding:0;accent-color:var(--brand-2)}
+.btn{padding:9px 14px;border:0;border-radius:10px;background:var(--brand);color:#fff;font:600 .9rem Inter,sans-serif;cursor:pointer;white-space:nowrap}
+@media (prefers-color-scheme:dark){.btn{color:#13200c}}
+.btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--line)}
+.btn.red{background:transparent;color:var(--err);border:1px solid color-mix(in srgb,var(--err) 40%,transparent)}
+.btn:disabled{opacity:.5}
+.login{max-width:380px;margin:30px auto}
+.login form{display:flex;gap:8px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:480px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{padding:12px}
+.kpi small{display:block;color:var(--muted);font-size:.75rem}
+.kpi b{font-family:Fraunces,Georgia,serif;font-size:1.45rem;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi.hl{background:var(--brand);border-color:transparent;color:#fff}.kpi.hl small{color:#dcefcf}
+@media (prefers-color-scheme:dark){.kpi.hl{color:#13200c}.kpi.hl small{color:#2c4a1c}}
+.neg{color:var(--err)}
+.set{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+@media (max-width:640px){.set{grid-template-columns:1fr}}
+.sw{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;user-select:none}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw i{width:46px;height:26px;border-radius:99px;background:var(--line);position:relative;transition:background .2s;flex:none}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw input:checked+i{background:var(--brand-2)}.sw input:checked+i::after{left:23px}
+.sw input:focus-visible+i{outline:2px solid var(--yolk)}
+.hint{color:var(--muted);font-size:.82rem;margin:6px 0 0}
+.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin:-4px -4px 14px;padding:0 4px}
+.tabs button{border:0;background:transparent;color:var(--muted);padding:9px 12px;font:600 .9rem Inter,sans-serif;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+.tabs .c{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:99px;background:var(--bg);font-size:.75rem}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.bar select,.bar input{width:auto}
+.bar .sp{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--ink);padding:7px 11px;font:500 .85rem Inter,sans-serif;cursor:pointer}
+.seg button.on{background:var(--brand);color:#fff}
+@media (prefers-color-scheme:dark){.seg button.on{color:#13200c}}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:8px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.c,th.c{text-align:center}
+tr.done td{opacity:.55}
+.note{color:var(--muted);font-size:.82rem;font-style:italic}
+.d{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+tfoot td{font-weight:600}
+.sel{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 10px;margin-bottom:10px;border-radius:10px;background:color-mix(in srgb,var(--yolk) 16%,var(--bg))}
+.form{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:8px;align-items:end;margin-bottom:14px}
+@media (max-width:700px){.form{grid-template-columns:1fr 1fr}}
+.x{border:0;background:transparent;color:var(--muted);font-size:1.1rem;cursor:pointer;width:28px;height:28px;border-radius:50%}
+.x:hover{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err)}
+.pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:.78rem;font-weight:600;background:var(--bg)}
+.pill.i{background:color-mix(in srgb,var(--yolk) 25%,var(--bg))}
+.ub{display:flex;gap:6px;flex-wrap:wrap}
+.ub .btn{padding:6px 10px;font-size:.8rem}
+.sum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.sum span{background:var(--bg);border-radius:99px;padding:4px 12px;font-size:.85rem}
+.empty{color:var(--muted);text-align:center;padding:20px}
+.err{color:var(--err)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="top"><div class="in"><img src="logo.svg" alt=""><h1>OviAmo · Report</h1>
+  <div class="act" id="act" hidden><button id="refresh">Aggiorna</button><button id="logout">Esci</button></div></div></div>
+
+<main class="wrap">
+  <section class="card login" id="login">
+    <h2>Accesso</h2>
+    <form id="lf"><input id="pw" type="password" placeholder="Password" autocomplete="current-password"><button class="btn">Entra</button></form>
+    <p class="err" id="lerr" hidden></p>
+  </section>
+
+  <div id="app" hidden style="display:grid;gap:14px">
+    <div class="kpis" id="kpis"></div>
+
+    <section class="card">
+      <div class="set">
+        <label class="sw"><input type="checkbox" id="open"><i></i><span id="openL">Prenotazioni aperte</span></label>
+        <input id="msg" maxlength="300" placeholder="Messaggio quando le uova sono finite o le prenotazioni chiuse">
+        <button class="btn" id="saveSet">Salva</button>
+      </div>
+      <p class="hint" id="setHint"></p>
+    </section>
+
+    <section class="card">
+      <nav class="tabs" id="tabs">
+        <button data-t="pren" class="on">Prenotazioni<span class="c" id="cPren">0</span></button>
+        <button data-t="car">Uova caricate<span class="c" id="cCar">0</span></button>
+        <button data-t="cos">Costi<span class="c" id="cCos">0</span></button>
+        <button data-t="ute">Utenti<span class="c" id="cUte">0</span></button>
+        <button data-t="gra">Grafico</button>
+      </nav>
+
+      <!-- PRENOTAZIONI -->
+      <div data-p="pren">
+        <div class="bar">
+          <div class="seg" id="pf"><button data-f="" class="on">Tutte</button><button data-f="np">Da pagare</button><button data-f="nc">Da consegnare</button></div>
+          <select id="py" aria-label="Anno"></select>
+          <input id="ps" type="search" placeholder="Cerca nome…" style="max-width:180px">
+          <span class="sp"></span>
+          <button class="btn ghost" id="csv">Scarica CSV</button>
+        </div>
+        <div class="sel" id="selBar" hidden>
+          <b id="selN"></b><span class="sp" style="flex:1"></span>
+          <button class="btn ghost" data-bulk="pagato">Segna pagate</button>
+          <button class="btn ghost" data-bulk="consegnato">Segna consegnate</button>
+          <button class="btn red" id="bulkDel">Elimina</button>
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th class="c"><input type="checkbox" id="all" aria-label="Seleziona tutte"></th><th>Data</th><th>Nome</th><th>Telefono</th><th class="n">Uova</th><th class="n">€</th><th class="c">Pagato</th><th class="c">Consegnato</th></tr></thead>
+          <tbody id="ptb"></tbody><tfoot id="ptf"></tfoot>
+        </table></div>
+      </div>
+
+      <!-- CARICHI -->
+      <div data-p="car" hidden>
+        <form class="form" id="fl">
+          <div><label for="lq">Uova</label><input id="lq" type="number" inputmode="numeric" placeholder="es. 30 (o -3 per uova rotte)"></div>
+          <div><label for="ld">Giorno</label><input id="ld" type="date"></div>
+          <div style="grid-column:span 2"><label for="ln">Note</label><input id="ln" maxlength="200"></div>
+          <button class="btn">Aggiungi</button>
+        </form>
+        <div class="sum" id="lsum"></div>
+        <div class="tw"><table><thead><tr><th>Giorno</th><th>Chi</th><th>Note</th><th class="n">Uova</th><th></th></tr></thead><tbody id="ltb"></tbody></table></div>
+      </div>
+
+      <!-- COSTI -->
+      <div data-p="cos" hidden>
+        <form class="form" id="fc">
+          <div style="grid-column:span 2"><label for="cdsc">Descrizione</label><input id="cdsc" maxlength="120" placeholder="Es. mangime 25 kg"></div>
+          <div><label for="cimp">Importo €</label><input id="cimp" inputmode="decimal" placeholder="0,00"></div>
+          <div><label for="cd">Giorno</label><input id="cd" type="date"></div>
+          <button class="btn">Aggiungi</button>
+        </form>
+        <div class="sum" id="csum"></div>
+        <div class="tw"><table><thead><tr><th>Giorno</th><th>Descrizione</th><th>Chi</th><th class="n">Importo</th><th></th></tr></thead><tbody id="ctb"></tbody></table></div>
+      </div>
+
+      <!-- UTENTI -->
+      <div data-p="ute" hidden>
+        <form class="form" id="fu" style="grid-template-columns:2fr 2fr auto auto">
+          <div><label for="un">Nome</label><input id="un" maxlength="60" placeholder="Es. Giulia"></div>
+          <div><label for="ur">Cosa può fare</label><select id="ur"><option value="caricatore">Carica solo le uova</option><option value="intermedio">Uova + costi + grafico</option></select></div>
+          <button class="btn" id="usave">Aggiungi</button>
+          <button class="btn ghost" type="button" id="ucancel" hidden>Annulla</button>
+        </form>
+        <div class="tw"><table><thead><tr><th>Nome</th><th>Ruolo</th><th>Dal</th><th>Link personale</th><th></th></tr></thead><tbody id="utb"></tbody></table></div>
+        <p class="hint">Ogni utente apre la sua pagina con il link personale: non serve password. Se un link finisce in mani sbagliate, elimina l'utente e crealo di nuovo (il vecchio link smette di funzionare).</p>
+      </div>
+
+      <!-- GRAFICO -->
+      <div data-p="gra" hidden><div id="chart"></div>
+        <p class="hint">Le vendite contano solo le prenotazioni segnate come pagate, alla data in cui le hai segnate.</p></div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="grafico.js"></script>
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXhUeNMN3RY65D-oPb6SxqTdgVZuZpA6em0BwmE9yyWn0u5FylQz2FVdI5outJomuK/exec';
+const SITE = location.origin.startsWith('http') ? location.origin : 'https://oviamo.boneggio.it';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const eur = n => (n||0).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
+const dIt = s => { const p=String(s).slice(0,10).split('-'); return p.length===3 ? `${+p[2]}/${+p[1]}/${p[0].slice(2)}` : s; };
+const pad = n => String(n).padStart(2,'0');
+const today = () => { const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+const store = { get(k){ try{return sessionStorage.getItem(k)}catch(e){return null} }, set(k,v){ try{ v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v) }catch(e){} } };
+let KEY = store.get('ovk') || '', D = null, chart = null, tab = 'pren', pf = '', sel = new Set(), editTk = '';
+
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2400); }
+const post = body => fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:KEY,...body})}).then(r=>r.json());
+const uovaTxt = o => [o.q6?`${o.q6}×6`:'', o.q1?`${o.q1} sing.`:''].filter(Boolean).join(' + ');
+
+async function load(){
+  const j = await fetch(SCRIPT_URL+'?action=report&key='+encodeURIComponent(KEY)).then(r=>r.json());
+  if(!j.ok) throw new Error(j.error||'Errore');
+  D = j; render();
+}
+$('lf').onsubmit = async e => {
+  e.preventDefault(); KEY = $('pw').value; $('lerr').hidden = true;
+  try{ await load(); store.set('ovk', KEY); enter(); }
+  catch(x){ $('lerr').hidden=false; $('lerr').textContent = x.message; }
+};
+function enter(){ $('login').hidden = true; $('app').hidden = false; $('act').hidden = false; }
+$('logout').onclick = () => { store.set('ovk', null); location.reload(); };
+$('refresh').onclick = async () => { try{ await load(); toast('Aggiornato'); }catch(x){ toast(x.message); } };
+if (KEY) load().then(enter).catch(()=>{ store.set('ovk',null); KEY=''; });
+
+/* ---------- render ---------- */
+function render(){
+  const O = D.orders, sum = (l,f)=>l.reduce((t,x)=>t+(+x[f]||0),0);
+  const paid = O.filter(o=>o.pagato), notDel = O.filter(o=>!o.consegnato);
+  const costi = sum(D.costs,'euro'), inc = sum(paid,'euro');
+  $('kpis').innerHTML = [
+    ['Uova disponibili', D.available, 'hl'],
+    ['Uova da consegnare', sum(notDel,'uova')],
+    ['Da incassare', eur(sum(O,'euro')-inc)],
+    ['Incassato', eur(inc)],
+    ['Costi', eur(costi)],
+    ['Margine', `<span class="${inc-costi<0?'neg':''}">${eur(inc-costi)}</span>`]
+  ].map(([l,v,c])=>`<div class="card kpi ${c||''}"><small>${l}</small><b>${v}</b></div>`).join('');
+
+  $('open').checked = D.settings.open; $('msg').value = D.settings.msg || '';
+  $('openL').textContent = D.settings.open ? 'Prenotazioni aperte' : 'Prenotazioni chiuse';
+  $('setHint').textContent = !D.settings.open ? 'La pagina mostra il messaggio di chiusura.'
+    : D.available > 0 ? `La pagina accetta prenotazioni fino a ${D.available} uova; poi si chiude da sola.`
+    : 'Uova finite: la pagina mostra il messaggio finché qualcuno non carica altre uova.';
+
+  $('cPren').textContent = O.length; $('cCar').textContent = D.loads.length; $('cCos').textContent = D.costs.length; $('cUte').textContent = D.users.length;
+  renderOrders(); renderLoads(); renderCosts(); renderUsers();
+  const cd = { sales: paid.map(o=>({data:o.dataPag||o.data.slice(0,10), euro:o.euro, uova:o.uova})), costs:D.costs, loads:D.loads };
+  if (chart) chart.update(cd); else chart = OviChart($('chart'), cd);
+}
+
+function ordersView(){
+  const y = $('py').value, s = $('ps').value.trim().toLowerCase();
+  return D.orders.filter(o => (!y || o.data.startsWith(y)) && (pf==='np' ? !o.pagato : pf==='nc' ? !o.consegnato : true)
+    && (!s || (o.nome+' '+o.cognome).toLowerCase().includes(s))).sort((a,b)=>b.data.localeCompare(a.data));
+}
+function renderOrders(){
+  const years = [...new Set(D.orders.map(o=>o.data.slice(0,4)))].sort().reverse(), cur = $('py').value;
+  $('py').innerHTML = '<option value="">Tutti gli anni</option>' + years.map(y=>`<option ${y===cur?'selected':''}>${y}</option>`).join('');
+  const V = ordersView();
+  [...sel].forEach(id => { if(!D.orders.some(o=>o.id===id)) sel.delete(id); });
+  $('ptb').innerHTML = V.map(o=>`<tr class="${o.pagato&&o.consegnato?'done':''}">
+    <td class="c"><input type="checkbox" data-sel="${esc(o.id)}" ${sel.has(o.id)?'checked':''} aria-label="Seleziona"></td>
+    <td class="d">${dIt(o.data)}</td>
+    <td><b>${esc(o.nome)} ${esc(o.cognome)}</b>${o.note?`<div class="note">“${esc(o.note)}”</div>`:''}</td>
+    <td>${o.telefono?`<a href="tel:${esc(o.telefono)}" style="color:inherit">${esc(o.telefono)}</a>`:''}</td>
+    <td class="n"><b>${o.uova}</b><div class="d" style="font-size:.78rem">${uovaTxt(o)}</div></td>
+    <td class="n">${eur(o.euro)}</td>
+    <td class="c"><input type="checkbox" data-flag="pagato" data-id="${esc(o.id)}" ${o.pagato?'checked':''} aria-label="Pagato"></td>
+    <td class="c"><input type="checkbox" data-flag="consegnato" data-id="${esc(o.id)}" ${o.consegnato?'checked':''} aria-label="Consegnato"></td>
+  </tr>`).join('') || `<tr><td colspan="8" class="empty">Nessuna prenotazione.</td></tr>`;
+  const s = (f)=>V.reduce((t,o)=>t+(+o[f]||0),0);
+  $('ptf').innerHTML = V.length ? `<tr><td></td><td colspan="3">${V.length} prenotazioni</td><td class="n">${s('uova')}</td><td class="n">${eur(s('euro'))}</td><td colspan="2"></td></tr>` : '';
+  $('all').checked = V.length && V.every(o=>sel.has(o.id));
+  $('selBar').hidden = !sel.size; $('selN').textContent = sel.size + (sel.size===1?' selezionata':' selezionate');
+}
+function renderLoads(){
+  const L = [...D.loads].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
+  const by = {}; L.forEach(l=>by[l.utente]=(by[l.utente]||0)+l.uova);
+  const booked = D.orders.reduce((t,o)=>t+o.uova,0), tot = L.reduce((t,l)=>t+l.uova,0);
+  $('lsum').innerHTML = `<span>Totale caricate: <b>${tot}</b></span><span>Prenotate: <b>${booked}</b></span><span>Disponibili: <b>${D.available}</b></span>` +
+    Object.entries(by).map(([u,n])=>`<span>${esc(u)}: ${n}</span>`).join('');
+  $('ltb').innerHTML = L.map(l=>`<tr><td class="d">${dIt(l.data)}</td><td>${esc(l.utente)}</td><td class="note">${esc(l.note)}</td><td class="n"><b>${l.uova}</b></td><td class="c"><button class="x" data-del="delLoad" data-id="${esc(l.id)}" aria-label="Cancella">×</button></td></tr>`).join('')
+    || `<tr><td colspan="5" class="empty">Nessun carico di uova.</td></tr>`;
+}
+function renderCosts(){
+  const C = [...D.costs].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
+  const y = new Date().getFullYear()+'';
+  $('csum').innerHTML = `<span>Totale: <b>${eur(C.reduce((t,c)=>t+c.euro,0))}</b></span><span>Nel ${y}: <b>${eur(C.filter(c=>c.data.startsWith(y)).reduce((t,c)=>t+c.euro,0))}</b></span>`;
+  $('ctb').innerHTML = C.map(c=>`<tr><td class="d">${dIt(c.data)}</td><td>${esc(c.descr)}</td><td>${esc(c.utente)}</td><td class="n"><b>${eur(c.euro)}</b></td><td class="c"><button class="x" data-del="delCost" data-id="${esc(c.id)}" aria-label="Cancella">×</button></td></tr>`).join('')
+    || `<tr><td colspan="5" class="empty">Nessun costo.</td></tr>`;
+}
+const link = u => `${SITE}/area.html?k=${u.tk}`;
+function renderUsers(){
+  $('utb').innerHTML = D.users.map(u=>`<tr>
+    <td><b>${esc(u.nome)}</b></td>
+    <td><span class="pill ${u.ruolo==='intermedio'?'i':''}">${u.ruolo==='intermedio'?'Uova + costi + grafico':'Solo uova'}</span></td>
+    <td class="d">${dIt(u.creato)}</td>
+    <td><div class="ub"><button class="btn ghost" data-copy="${esc(u.tk)}">Copia link</button><button class="btn ghost" data-wa="${esc(u.tk)}">WhatsApp</button></div></td>
+    <td><div class="ub"><button class="btn ghost" data-edit="${esc(u.tk)}">Modifica</button><button class="btn red" data-udel="${esc(u.tk)}">Elimina</button></div></td>
+  </tr>`).join('') || `<tr><td colspan="5" class="empty">Nessun utente. Aggiungi chi carica le uova.</td></tr>`;
+}
+
+/* ---------- azioni ---------- */
+$('tabs').onclick = e => { const b=e.target.closest('button'); if(!b) return; tab=b.dataset.t;
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('[data-p]').forEach(p=>p.hidden = p.dataset.p!==tab); if(tab==='gra'&&chart) chart.update({}); };
+$('pf').onclick = e => { const b=e.target.closest('button'); if(!b) return; pf=b.dataset.f;
+  document.querySelectorAll('#pf button').forEach(x=>x.classList.toggle('on',x===b)); renderOrders(); };
+$('py').onchange = renderOrders; $('ps').oninput = renderOrders;
+
+$('saveSet').onclick = async () => {
+  try{ const j = await post({action:'settings', open:$('open').checked, msg:$('msg').value.trim()}); if(!j.ok) throw new Error(j.error);
+    D.settings = j.settings; render(); toast('Salvato'); }catch(x){ toast(x.message||'Errore'); }
+};
+$('open').onchange = () => $('saveSet').click();
+
+document.addEventListener('change', async e => {
+  const t = e.target;
+  if (t.dataset.sel){ t.checked ? sel.add(t.dataset.sel) : sel.delete(t.dataset.sel); renderOrders(); return; }
+  if (t.id === 'all'){ ordersView().forEach(o => t.checked ? sel.add(o.id) : sel.delete(o.id)); renderOrders(); return; }
+  if (t.dataset.flag) flag([t.dataset.id], t.dataset.flag, t.checked);
+});
+async function flag(ids, field, value){
+  const O = D.orders.filter(o=>ids.includes(o.id)), old = O.map(o=>o[field]);
+  O.forEach(o=>{ o[field]=value; if(field==='pagato') o.dataPag = value ? today() : ''; }); render();
+  try{ const j = await post({action:'flag', ids, field, value}); if(!j.ok) throw new Error(j.error); }
+  catch(x){ O.forEach((o,i)=>o[field]=old[i]); render(); toast('Non salvato, riprova'); }
+}
+document.querySelectorAll('[data-bulk]').forEach(b => b.onclick = () => { flag([...sel], b.dataset.bulk, true); sel.clear(); renderOrders(); });
+$('bulkDel').onclick = async () => {
+  const ids = [...sel]; if(!confirm(`Eliminare ${ids.length} prenotazioni? Le uova tornano disponibili.`)) return;
+  try{ const j = await post({action:'delOrders', ids}); if(!j.ok) throw new Error(j.error); sel.clear(); await load(); toast(`Eliminate ${j.deleted}`); }catch(x){ toast(x.message); }
+};
+$('csv').onclick = () => {
+  const V = ordersView(), q = v => `"${String(v??'').replace(/"/g,'""')}"`;
+  const rows = [['Data','Nome','Cognome','Telefono','Uova singole','Confezioni da 6','Totale uova','Totale €','Pagato','Consegnato','Note'],
+    ...V.map(o=>[o.data,o.nome,o.cognome,o.telefono,o.q1,o.q6,o.uova,String(o.euro).replace('.',','),o.pagato?'sì':'no',o.consegnato?'sì':'no',o.note])];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿'+rows.map(r=>r.map(q).join(';')).join('\n')],{type:'text/csv'}));
+  a.download = 'oviamo-prenotazioni'+($('py').value?'-'+$('py').value:'')+'.csv'; a.click();
+};
+
+$('ld').value = today(); $('cd').value = today();
+$('fl').onsubmit = async e => { e.preventDefault();
+  const n = parseInt($('lq').value,10)||0; if(!n) return toast('Scrivi quante uova');
+  try{ const j = await post({action:'load', uova:n, data:$('ld').value, note:$('ln').value.trim()}); if(!j.ok) throw new Error(j.error);
+    $('lq').value=''; $('ln').value=''; await load(); toast(`${n>0?'Aggiunte':'Tolte'} ${Math.abs(n)} uova`); }catch(x){ toast(x.message); } };
+$('fc').onsubmit = async e => { e.preventDefault();
+  const imp = parseFloat($('cimp').value.replace(',','.'))||0, descr=$('cdsc').value.trim();
+  if(!descr) return toast('Scrivi una descrizione'); if(imp<=0) return toast('Scrivi l\'importo');
+  try{ const j = await post({action:'cost', importo:imp, descr, data:$('cd').value}); if(!j.ok) throw new Error(j.error);
+    $('cimp').value=''; $('cdsc').value=''; await load(); toast('Costo aggiunto'); }catch(x){ toast(x.message); } };
+
+$('fu').onsubmit = async e => { e.preventDefault();
+  const nome = $('un').value.trim(); if(!nome) return toast('Scrivi il nome');
+  try{ const j = await post({action:'userSave', tk:editTk, nome, ruolo:$('ur').value}); if(!j.ok) throw new Error(j.error);
+    D.users = j.users; resetUser(); render(); toast('Utente salvato'); }catch(x){ toast(x.message); } };
+function resetUser(){ editTk=''; $('un').value=''; $('ur').value='caricatore'; $('usave').textContent='Aggiungi'; $('ucancel').hidden=true; }
+$('ucancel').onclick = resetUser;
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button'); if(!b) return;
+  const d = b.dataset;
+  if (d.del){ if(!confirm('Cancellare questa riga?')) return;
+    try{ const j = await post({action:d.del, id:d.id}); if(!j.ok) throw new Error(j.error||'Non cancellato'); await load(); toast('Cancellato'); }catch(x){ toast(x.message); } }
+  if (d.copy){ const u = D.users.find(x=>x.tk===d.copy);
+    try{ await navigator.clipboard.writeText(link(u)); toast('Link di '+u.nome+' copiato'); }catch(x){ prompt('Copia il link:', link(u)); } }
+  if (d.wa){ const u = D.users.find(x=>x.tk===d.wa);
+    const t = `Ciao ${u.nome}! Questo è il tuo link per OviAmo: da qui puoi caricare le uova raccolte${u.ruolo==='intermedio'?', i costi del mangime e vedere il grafico':''}.\n${link(u)}`;
+    window.open('https://wa.me/?text='+encodeURIComponent(t), '_blank'); }
+  if (d.edit){ const u = D.users.find(x=>x.tk===d.edit); editTk=u.tk; $('un').value=u.nome; $('ur').value=u.ruolo; $('usave').textContent='Salva'; $('ucancel').hidden=false; $('un').focus(); }
+  if (d.udel){ const u = D.users.find(x=>x.tk===d.udel); if(!confirm(`Eliminare ${u.nome}? Il suo link smetterà di funzionare (i dati che ha caricato restano).`)) return;
+    try{ const j = await post({action:'userDelete', tk:u.tk}); if(!j.ok) throw new Error(j.error); D.users=j.users; render(); toast('Eliminato'); }catch(x){ toast(x.message); } }
+});
+</script>
+</body>
+</html>
