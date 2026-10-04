@@ -119,6 +119,7 @@ tfoot td{font-weight:600}
         <button data-t="pren" class="on">Prenotazioni<span class="c" id="cPren">0</span></button>
         <button data-t="car">Uova caricate<span class="c" id="cCar">0</span></button>
         <button data-t="cos">Costi<span class="c" id="cCos">0</span></button>
+        <button data-t="gal">Galline<span class="c" id="cGal">–</span></button>
         <button data-t="ute">Utenti<span class="c" id="cUte">0</span></button>
         <button data-t="gra">Grafico</button>
       </nav>
@@ -169,6 +170,20 @@ tfoot td{font-weight:600}
       </div>
 
       <!-- UTENTI -->
+      <!-- GALLINE -->
+      <div data-p="gal" hidden>
+        <form class="form" id="fh">
+          <div><label for="ht">Galline totali</label><input id="ht" type="number" inputmode="numeric" min="0"></div>
+          <div><label for="hp">Fanno le uova</label><input id="hp" type="number" inputmode="numeric" min="0"></div>
+          <div><label for="hd">Dal giorno</label><input id="hd" type="date"></div>
+          <div><label for="hn">Note</label><input id="hn" maxlength="200" placeholder="es. 3 nuove pollastre"></div>
+          <button class="btn">Aggiorna</button>
+        </form>
+        <div class="sum" id="hsum"></div>
+        <div class="tw"><table><thead><tr><th>Dal giorno</th><th class="n">Totali</th><th class="n">In produzione</th><th>Note</th><th>Chi</th><th></th></tr></thead><tbody id="htb"></tbody></table></div>
+        <p class="hint">Ogni riga vale dal giorno indicato fino all'aggiornamento successivo. Nel grafico trovi costo per gallina, costo per gallina in produzione, uova per gallina e costo per uovo del periodo scelto.</p>
+      </div>
+
       <div data-p="ute" hidden>
         <form class="form" id="fu" style="grid-template-columns:2fr 2fr auto auto">
           <div><label for="un">Nome</label><input id="un" maxlength="60" placeholder="Es. Giulia"></div>
@@ -241,8 +256,9 @@ function render(){
     : 'Uova finite: la pagina mostra il messaggio finché qualcuno non carica altre uova.';
 
   $('cPren').textContent = O.length; $('cCar').textContent = D.loads.length; $('cCos').textContent = D.costs.length; $('cUte').textContent = D.users.length;
+  renderHens();
   renderOrders(); renderLoads(); renderCosts(); renderUsers();
-  const cd = { sales: paid.map(o=>({data:o.dataPag||o.data.slice(0,10), euro:o.euro, uova:o.uova})), costs:D.costs, loads:D.loads };
+  const cd = { sales: paid.map(o=>({data:o.dataPag||o.data.slice(0,10), euro:o.euro, uova:o.uova})), costs:D.costs, loads:D.loads, hens:D.hens||[] };
   if (chart) chart.update(cd); else chart = OviChart($('chart'), cd);
 }
 
@@ -338,7 +354,7 @@ $('csv').onclick = () => {
   a.download = 'oviamo-prenotazioni'+($('py').value?'-'+$('py').value:'')+'.csv'; a.click();
 };
 
-$('ld').value = today(); $('cd').value = today();
+$('ld').value = today(); $('cd').value = today(); $('hd').value = today();
 $('fl').onsubmit = async e => { e.preventDefault();
   const n = parseInt($('lq').value,10)||0; if(!n) return toast('Scrivi quante uova');
   try{ const j = await post({action:'load', uova:n, data:$('ld').value, note:$('ln').value.trim()}); if(!j.ok) throw new Error(j.error);
@@ -349,6 +365,20 @@ $('fc').onsubmit = async e => { e.preventDefault();
   try{ const j = await post({action:'cost', importo:imp, descr, data:$('cd').value}); if(!j.ok) throw new Error(j.error);
     $('cimp').value=''; $('cdsc').value=''; await load(); toast('Costo aggiunto'); }catch(x){ toast(x.message); } };
 
+
+function renderHens(){
+  const H = [...(D.hens||[])].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins)), cur = H[0];
+  $('cGal').textContent = cur ? cur.tot : '–';
+  $('hsum').innerHTML = cur ? `<span>Adesso: <b>${cur.tot}</b> galline</span><span>In produzione: <b>${cur.prod}</b></span><span>Dal ${dIt(cur.data)}</span>` : '<span>Nessun dato sulle galline.</span>';
+  if (cur && !$('ht').value){ $('ht').value = cur.tot; $('hp').value = cur.prod; }
+  $('htb').innerHTML = H.map(h=>`<tr><td class="d">${dIt(h.data)}</td><td class="n"><b>${h.tot}</b></td><td class="n">${h.prod}</td><td class="note">${esc(h.note)}</td><td>${esc(h.utente)}</td><td class="c"><button class="x" data-del="delHens" data-id="${esc(h.id)}" aria-label="Cancella">×</button></td></tr>`).join('')
+    || '<tr><td colspan="6" class="empty">Nessun dato.</td></tr>';
+}
+$('fh').onsubmit = async e => { e.preventDefault();
+  const tot = parseInt($('ht').value,10), prod = parseInt($('hp').value,10);
+  if (!(tot>=0) || !(prod>=0)) return toast('Scrivi i numeri'); if (prod>tot) return toast('In produzione non può superare il totale');
+  try{ const j = await post({action:'hens', tot, prod, data:$('hd').value, note:$('hn').value.trim()}); if(!j.ok) throw new Error(j.error);
+    $('hn').value=''; await load(); toast('Galline aggiornate'); }catch(x){ toast(x.message); } };
 $('fu').onsubmit = async e => { e.preventDefault();
   const nome = $('un').value.trim(); if(!nome) return toast('Scrivi il nome');
   try{ const j = await post({action:'userSave', tk:editTk, nome, ruolo:$('ur').value}); if(!j.ok) throw new Error(j.error);

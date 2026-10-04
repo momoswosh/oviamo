@@ -19,6 +19,7 @@ const CSS = `
 .oc-k div{background:var(--bg);border-radius:12px;padding:8px 10px}
 .oc-k small{display:block;color:var(--muted);font-size:.75rem}
 .oc-k b{font-family:Fraunces,Georgia,serif;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.oc-h small i{font-style:normal;opacity:.75}
 .oc-k .pos{color:var(--brand)}.oc-k .neg{color:var(--err)}
 .oc-svg{width:100%;height:auto;display:block}
 .oc-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin-top:6px}
@@ -27,7 +28,7 @@ const CSS = `
 
 window.OviChart = function(el, data){
   if (!document.getElementById('oc-css')){ const s=document.createElement('style'); s.id='oc-css'; s.textContent=CSS; document.head.appendChild(s); }
-  const D = { sales: data.sales||[], costs: data.costs||[], loads: data.loads||[] };
+  const D = { sales: data.sales||[], costs: data.costs||[], loads: data.loads||[], hens: data.hens||[] };
   const all = [...D.sales, ...D.costs, ...D.loads].map(x=>String(x.data||'').slice(0,10)).filter(Boolean);
   const now = new Date(), thisY = now.getFullYear();
   const years = [...new Set(all.map(d=>+d.slice(0,4)).concat(thisY))].sort((a,b)=>b-a);
@@ -41,6 +42,7 @@ window.OviChart = function(el, data){
       <span class="oc-p" hidden><input type="date" class="oc-from" aria-label="Dal"> → <input type="date" class="oc-to" aria-label="Al"></span>
     </div>
     <div class="oc-k"></div>
+    <div class="oc-k oc-h"></div>
     <div class="oc-plot"></div>
     <div class="oc-leg"><span><i style="background:var(--brand-2)"></i>Vendite incassate</span><span><i style="background:#d9822b"></i>Costi</span><span><i style="background:var(--yolk);height:3px"></i>Margine cumulato</span></div>`;
   const q = s => el.querySelector(s);
@@ -84,6 +86,26 @@ window.OviChart = function(el, data){
       <div><small>Costi</small><b>${eur(vc)}</b></div>
       <div><small>Margine</small><b class="${m>=0?'pos':'neg'}">${eur(m)}</b></div>
       <div><small>Uova vendute / raccolte</small><b>${sum(S,'uova')} / ${sum(L,'uova')}</b></div>`;
+
+    // galline: media giornaliera nel periodo (ogni aggiornamento vale fino al successivo)
+    const HN = [...D.hens].sort((x,y)=>String(x.data).localeCompare(String(y.data)));
+    let nd=0, sT=0, sP=0;
+    const end = b < iso(now) ? b : iso(now);
+    if (HN.length && a <= end) {
+      let d = new Date(a+'T12:00:00'), j = -1;
+      const e = new Date(end+'T12:00:00');
+      while (d <= e) { const k = iso(d); while (j+1 < HN.length && String(HN[j+1].data).slice(0,10) <= k) j++;
+        if (j >= 0) { nd++; sT += +HN[j].tot||0; sP += +HN[j].prod||0; } d.setDate(d.getDate()+1); }
+    }
+    const raccolte = sum(L,'uova'), gt = nd ? sT/nd : 0, gp = nd ? sP/nd : 0;
+    const f1 = n => n.toLocaleString('it-IT',{maximumFractionDigits:1});
+    const per = (x,y) => y ? eur(x/y) : '–';
+    q('.oc-h').hidden = !nd && !raccolte;
+    q('.oc-h').innerHTML = nd || raccolte ? `
+      <div><small>Galline <i>(media)</i></small><b>${nd?f1(gt)+' / '+f1(gp):'–'}</b><small>totali / in produzione</small></div>
+      <div><small>Costo per gallina</small><b>${per(vc,gt)}</b><small>in produzione: ${per(vc,gp)}</small></div>
+      <div><small>Uova per gallina in produzione</small><b>${gp?f1(raccolte/gp):'–'}</b><small>nel periodo</small></div>
+      <div><small>Costo per uovo raccolto</small><b>${per(vc,raccolte)}</b><small>margine per uovo venduto: ${per(m,sum(S,'uova'))}</small></div>` : '';
 
     const B = buckets(a,b,unit), idx = {}; B.forEach((x,i)=>{ idx[x.k]=i; x.s=0; x.c=0; });
     S.forEach(x=>{ const k=keyOf(String(x.data).slice(0,10),unit,B); if(k in idx) B[idx[k]].s += +x.euro||0; });

@@ -34,6 +34,7 @@ input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10
 input:focus{outline:2px solid var(--yolk);outline-offset:1px;border-color:transparent}
 .field{margin-bottom:12px}
 .big{display:flex;align-items:center;gap:10px}
+.grid .big button{width:40px;height:40px}
 .big button{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--brand);font-size:1.4rem;cursor:pointer}
 .big input{text-align:center;font-size:1.3rem;font-weight:600}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
@@ -99,6 +100,26 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
     <h2 style="margin-top:18px" id="lTitle">I tuoi ultimi carichi</h2>
     <div class="list" id="loads"></div>
     <button class="more" id="lmore" hidden>Mostra tutti</button>
+  </section>
+
+  <section class="card" id="henCard" hidden>
+    <h2>🐔 Galline nel pollaio</h2>
+    <div class="osum" id="hnow"></div>
+    <form id="fh">
+      <div class="grid">
+        <div class="field"><label for="ht">Galline totali</label>
+          <div class="big"><button type="button" data-h="ht" data-d="-1" aria-label="Meno">−</button><input id="ht" type="number" inputmode="numeric" min="0" max="10000" value="0"><button type="button" data-h="ht" data-d="1" aria-label="Più">+</button></div></div>
+        <div class="field"><label for="hp">Di cui fanno le uova</label>
+          <div class="big"><button type="button" data-h="hp" data-d="-1" aria-label="Meno">−</button><input id="hp" type="number" inputmode="numeric" min="0" max="10000" value="0"><button type="button" data-h="hp" data-d="1" aria-label="Più">+</button></div></div>
+      </div>
+      <div class="grid">
+        <div class="field"><label for="hd">Dal giorno</label><input id="hd" type="date"></div>
+        <div class="field"><label for="hn">Note <span class="opt">(es. 3 nuove pollastre)</span></label><input id="hn" maxlength="200"></div>
+      </div>
+      <button class="btn" id="hgo">Aggiorna il numero di galline</button>
+    </form>
+    <h2 style="margin-top:18px">Storico</h2>
+    <div class="list" id="hens"></div>
   </section>
 
   <section class="card" id="ordCard" hidden>
@@ -169,18 +190,18 @@ function render(){
   $('loads').innerHTML = lv.map(l=>`<div class="it"><span class="d">${dIt(l.data)}</span><span>${inter?esc(l.utente):''}${l.note?` <span class="w">${esc(l.note)}</span>`:''}</span><b>${l.uova} uova</b>${l.utente===D.nome?`<button class="x" data-del="load" data-id="${esc(l.id)}" aria-label="Cancella">×</button>`:'<span></span>'}</div>`).join('') || '<p class="empty">Ancora nessun carico.</p>';
   $('lmore').hidden = allL || L.length <= 8;
   if (!inter) return;
-  $('costCard').hidden = false; $('chartCard').hidden = false; $('ordCard').hidden = false;
-  renderOrders();
+  $('costCard').hidden = false; $('chartCard').hidden = false; $('ordCard').hidden = false; $('henCard').hidden = false;
+  renderOrders(); renderHens();
   const C = [...D.costs].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
   $('costs').innerHTML = (allC?C:C.slice(0,8)).map(c=>`<div class="it"><span class="d">${dIt(c.data)}</span><span>${esc(c.descr)} <span class="w">${esc(c.utente)}</span></span><b>${eur(c.euro)}</b>${c.utente===D.nome?`<button class="x" data-del="cost" data-id="${esc(c.id)}" aria-label="Cancella">×</button>`:'<span></span>'}</div>`).join('') || '<p class="empty">Ancora nessun costo.</p>';
   $('cmore').hidden = allC || C.length <= 8;
   $('cdl').innerHTML = [...new Set(C.map(c=>c.descr))].slice(0,12).map(s=>`<option value="${esc(s)}">`).join('');
-  const cd = {sales:D.sales, costs:D.costs, loads:D.loads};
+  const cd = {sales:D.sales, costs:D.costs, loads:D.loads, hens:D.hens||[]};
   if (chart) chart.update(cd); else chart = OviChart($('chart'), cd);
 }
 
 // ----- carico uova -----
-$('ld').value = today(); $('cd').value = today();
+$('ld').value = today(); $('cd').value = today(); $('hd').value = today();
 document.querySelector('.big').onclick = e => { const b=e.target.closest('button'); if(!b) return; $('lq').value = Math.max(0,(+$('lq').value||0) + +b.dataset.d); };
 document.querySelector('.quick').onclick = e => { const b=e.target.closest('button'); if(!b) return; $('lq').value = (+$('lq').value||0) + +b.dataset.a; };
 $('fl').onsubmit = async e => {
@@ -218,7 +239,7 @@ document.addEventListener('click', async e => {
   if(!confirm('Cancellare questa riga?')) return;
   b.disabled = true;
   try{
-    const j = await post({action: b.dataset.del==='load' ? 'delLoad' : 'delCost', id:b.dataset.id});
+    const j = await post({action: {load:'delLoad', cost:'delCost', hens:'delHens'}[b.dataset.del], id:b.dataset.id});
     if(!j.ok) throw new Error(j.error||'Non cancellato');
     toast('Cancellato'); await load();
   }catch(x){ b.disabled=false; toast(x.message); }
@@ -256,6 +277,31 @@ $('ords').onclick = async e => {
     toast(`${o.nome}: ${f==='pagato'?(v?'pagato':'da pagare'):(v?'consegnato':'da consegnare')}`);
     if (f==='pagato') load();   // aggiorna grafico e totali
   }catch(x){ o[f] = !v; renderOrders(); toast('Non salvato, riprova'); }
+};
+
+// ----- galline (solo intermedio) -----
+let henInit = false;
+function renderHens(){
+  const H = [...(D.hens||[])].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
+  const cur = H[0];
+  $('hnow').innerHTML = cur ? `<span>Adesso: <b>${cur.tot}</b> galline</span><span>in produzione: <b>${cur.prod}</b></span><span class="w">dal ${dIt(cur.data)}</span>` : '<span>Non hai ancora inserito il numero di galline.</span>';
+  if (!henInit && cur){ $('ht').value = cur.tot; $('hp').value = cur.prod; }
+  henInit = true;
+  $('hens').innerHTML = H.slice(0,12).map(h=>`<div class="it"><span class="d">${dIt(h.data)}</span><span>${h.note?esc(h.note)+' ':''}<span class="w">${esc(h.utente)}</span></span><b>${h.tot} / ${h.prod}</b>${h.utente===D.nome?`<button class="x" data-del="hens" data-id="${esc(h.id)}" aria-label="Cancella">×</button>`:'<span></span>'}</div>`).join('') || '<p class="empty">Nessun dato.</p>';
+}
+$('fh').onclick = e => { const b=e.target.closest('button[data-h]'); if(!b) return; const i=$(b.dataset.h); i.value = Math.max(0,(+i.value||0) + +b.dataset.d); };
+$('fh').onsubmit = async e => {
+  e.preventDefault();
+  const tot = parseInt($('ht').value,10), prod = parseInt($('hp').value,10);
+  if (!(tot>=0) || !(prod>=0)) return toast('Scrivi i numeri');
+  if (prod > tot) return toast('Quelle che fanno le uova non possono essere più del totale');
+  const b=$('hgo'); b.disabled=true;
+  try{
+    const j = await post({action:'hens', tot, prod, data:$('hd').value, note:$('hn').value.trim()});
+    if(!j.ok) throw new Error(j.error);
+    toast(`Galline aggiornate: ${tot} (${prod} in produzione)`); $('hn').value=''; await load();
+  }catch(x){ toast(x.message||'Non salvato, riprova'); }
+  finally{ b.disabled=false; }
 };
 $('lmore').onclick = () => { allL=true; render(); };
 $('cmore').onclick = () => { allC=true; render(); };
