@@ -19,6 +19,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-u
 .top .in{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:12px}
 .top img{width:64px;filter:drop-shadow(0 4px 8px rgba(30,50,10,.3))}
 h1{font-family:Fraunces,Georgia,serif;font-weight:800;color:#fff;margin:0;font-size:1.7rem;line-height:1.1;text-shadow:0 2px 10px rgba(30,60,10,.55)}
+.top .rf{margin-left:auto;flex:none;border:0;background:rgba(255,255,255,.9);color:#3f6b2a;border-radius:99px;padding:7px 14px;font:600 .85rem Inter,sans-serif;cursor:pointer}
+.top .rf:disabled{opacity:.6}
 .badge{display:inline-block;margin-top:4px;padding:2px 10px;border-radius:99px;background:rgba(255,255,255,.88);color:#3f6b2a;font-size:.78rem;font-weight:600}
 .wrap{max-width:680px;margin:-22px auto 0;padding:0 16px 48px;display:grid;gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 12px 34px -24px rgba(30,60,10,.5)}
@@ -74,7 +76,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
 </style>
 </head>
 <body>
-<div class="top"><div class="in"><img src="logo.svg" alt=""><div><h1 id="title">OviAmo</h1><span class="badge" id="badge">…</span></div></div></div>
+<div class="top"><div class="in"><img src="logo.svg" alt=""><div><h1 id="title">OviAmo</h1><span class="badge" id="badge">…</span></div><button class="rf" id="refresh" hidden>↻ Aggiorna</button></div></div>
 
 <main class="wrap">
   <p class="card err" id="err" hidden></p>
@@ -174,7 +176,7 @@ async function load(){
     if(!TK) throw new Error('Questo link non è completo. Chiedi il tuo link personale a chi gestisce OviAmo.');
     const j = await fetch(SCRIPT_URL+'?action=area&t='+encodeURIComponent(TK)).then(r=>r.json());
     if(!j.ok) throw new Error(j.error||'Errore');
-    D = j; render();
+    D = j; $('err').hidden=true; $('refresh').hidden=false; render();
   }catch(e){ $('err').hidden=false; $('err').textContent=e.message; $('badge').hidden=true; }
 }
 
@@ -305,6 +307,10 @@ $('fh').onsubmit = async e => {
 };
 $('lmore').onclick = () => { allL=true; render(); };
 $('cmore').onclick = () => { allC=true; render(); };
+$('refresh').onclick = async () => { const b=$('refresh'); b.disabled=true; b.textContent='Aggiorno…'; await load(); b.disabled=false; b.textContent='↻ Aggiorna'; if($('err').hidden) toast('Aggiornato'); };
+// quando torni sulla pagina (es. dal telefono) si aggiorna da sola
+let lastLoad = Date.now();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState==='visible' && D && Date.now()-lastLoad > 60000) { lastLoad = Date.now(); load(); } });
 load();
 </script>
 </body>
