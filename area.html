@@ -51,6 +51,22 @@ input:focus{outline:2px solid var(--yolk);outline-offset:1px;border-color:transp
 .more{background:none;border:0;color:var(--brand);text-decoration:underline;cursor:pointer;font:inherit;font-size:.9rem;margin-top:6px}
 .empty{color:var(--muted);font-size:.9rem}
 .err{color:var(--err)}
+.ord{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--bg)}
+.ord.done{opacity:.55}
+.ord h3{margin:0;font-size:.98rem}
+.ord .w{color:var(--muted);font-size:.82rem}
+.ord .e{font-family:Fraunces,Georgia,serif;font-weight:800;font-variant-numeric:tabular-nums}
+.ord .nt{grid-column:1/-1;font-size:.82rem;color:var(--muted);font-style:italic}
+.flags{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:99px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:600 .85rem Inter,sans-serif;cursor:pointer}
+.chip .dot{width:16px;height:16px;border-radius:50%;border:2px solid currentColor;display:inline-grid;place-items:center;font-size:.7rem;line-height:1}
+.chip.on{border-color:var(--brand-2);color:var(--brand);background:color-mix(in srgb,var(--brand-2) 14%,var(--card))}
+.chip.on .dot{background:var(--brand-2);border-color:var(--brand-2);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.seg button{border:0;background:transparent;color:var(--ink);padding:7px 11px;font:500 .85rem Inter,sans-serif;cursor:pointer}
+.seg button.on{background:var(--brand);color:#fff}
+.osum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.osum span{background:var(--bg);border-radius:99px;padding:4px 12px;font-size:.85rem}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
 footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
@@ -83,6 +99,14 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
     <h2 style="margin-top:18px" id="lTitle">I tuoi ultimi carichi</h2>
     <div class="list" id="loads"></div>
     <button class="more" id="lmore" hidden>Mostra tutti</button>
+  </section>
+
+  <section class="card" id="ordCard" hidden>
+    <h2>🧺 Prenotazioni</h2>
+    <div class="osum" id="osum"></div>
+    <div class="seg" id="of"><button data-f="np" class="on">Da pagare</button><button data-f="nc">Da consegnare</button><button data-f="">Tutte</button></div>
+    <div class="list" id="ords"></div>
+    <button class="more" id="omore" hidden>Mostra tutte</button>
   </section>
 
   <section class="card" id="costCard" hidden>
@@ -119,7 +143,7 @@ const dIt = s => { const p=String(s).slice(0,10).split('-'); return p.length===3
 const pad = n => String(n).padStart(2,'0');
 const today = () => { const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
 const TK = new URLSearchParams(location.search).get('k') || '';
-let D = null, chart = null, allL = false, allC = false;
+let D = null, chart = null, allL = false, allC = false, allO = false, of = 'np';
 
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2400); }
 const post = body => fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({t:TK,...body})}).then(r=>r.json());
@@ -145,7 +169,8 @@ function render(){
   $('loads').innerHTML = lv.map(l=>`<div class="it"><span class="d">${dIt(l.data)}</span><span>${inter?esc(l.utente):''}${l.note?` <span class="w">${esc(l.note)}</span>`:''}</span><b>${l.uova} uova</b>${l.utente===D.nome?`<button class="x" data-del="load" data-id="${esc(l.id)}" aria-label="Cancella">×</button>`:'<span></span>'}</div>`).join('') || '<p class="empty">Ancora nessun carico.</p>';
   $('lmore').hidden = allL || L.length <= 8;
   if (!inter) return;
-  $('costCard').hidden = false; $('chartCard').hidden = false;
+  $('costCard').hidden = false; $('chartCard').hidden = false; $('ordCard').hidden = false;
+  renderOrders();
   const C = [...D.costs].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
   $('costs').innerHTML = (allC?C:C.slice(0,8)).map(c=>`<div class="it"><span class="d">${dIt(c.data)}</span><span>${esc(c.descr)} <span class="w">${esc(c.utente)}</span></span><b>${eur(c.euro)}</b>${c.utente===D.nome?`<button class="x" data-del="cost" data-id="${esc(c.id)}" aria-label="Cancella">×</button>`:'<span></span>'}</div>`).join('') || '<p class="empty">Ancora nessun costo.</p>';
   $('cmore').hidden = allC || C.length <= 8;
@@ -198,6 +223,40 @@ document.addEventListener('click', async e => {
     toast('Cancellato'); await load();
   }catch(x){ b.disabled=false; toast(x.message); }
 });
+
+// ----- prenotazioni (solo intermedio) -----
+const uovaTxt = o => [o.q6?`${o.q6}×6`:'', o.q1?`${o.q1} sing.`:''].filter(Boolean).join(' + ');
+function renderOrders(){
+  const O = D.orders || [], sum=(l,f)=>l.reduce((t,x)=>t+(+x[f]||0),0);
+  const np = O.filter(o=>!o.pagato), nc = O.filter(o=>!o.consegnato);
+  $('osum').innerHTML = `<span>Da incassare: <b>${eur(sum(np,'euro'))}</b></span><span>Uova da consegnare: <b>${sum(nc,'uova')}</b></span>`;
+  const V = O.filter(o => of==='np' ? !o.pagato : of==='nc' ? !o.consegnato : true).sort((a,b)=>b.data.localeCompare(a.data));
+  const vis = allO ? V : V.slice(0,15);
+  $('ords').innerHTML = vis.map(o=>`<div class="ord ${o.pagato&&o.consegnato?'done':''}">
+    <div><h3>${esc(o.nome)} ${esc(o.cognome)}</h3><div class="w">${dIt(o.data)} · ${o.uova} uova (${uovaTxt(o)})${o.telefono?` · <a href="tel:${esc(o.telefono)}" style="color:inherit">${esc(o.telefono)}</a>`:''}</div></div>
+    <div class="e">${eur(o.euro)}</div>
+    ${o.note?`<div class="nt">“${esc(o.note)}”</div>`:''}
+    <div class="flags">
+      <button class="chip ${o.pagato?'on':''}" data-oid="${esc(o.id)}" data-f="pagato" aria-pressed="${o.pagato}"><span class="dot">${o.pagato?'✓':''}</span>Pagato</button>
+      <button class="chip ${o.consegnato?'on':''}" data-oid="${esc(o.id)}" data-f="consegnato" aria-pressed="${o.consegnato}"><span class="dot">${o.consegnato?'✓':''}</span>Consegnato</button>
+    </div></div>`).join('') || `<p class="empty">${O.length ? 'Nessuna prenotazione in questo elenco.' : 'Ancora nessuna prenotazione.'}</p>`;
+  $('omore').hidden = allO || V.length <= 15;
+}
+$('of').onclick = e => { const b=e.target.closest('button'); if(!b) return; of=b.dataset.f;
+  document.querySelectorAll('#of button').forEach(x=>x.classList.toggle('on',x===b)); renderOrders(); };
+$('omore').onclick = () => { allO=true; renderOrders(); };
+$('ords').onclick = async e => {
+  const b = e.target.closest('button.chip'); if(!b) return;
+  const o = D.orders.find(x=>x.id===b.dataset.oid); if(!o) return;
+  const f = b.dataset.f, v = !o[f];
+  o[f] = v; renderOrders();
+  try{
+    const j = await post({action:'flag', ids:[o.id], field:f, value:v});
+    if(!j.ok || !j.updated) throw new Error(j.error||'non salvato');
+    toast(`${o.nome}: ${f==='pagato'?(v?'pagato':'da pagare'):(v?'consegnato':'da consegnare')}`);
+    if (f==='pagato') load();   // aggiorna grafico e totali
+  }catch(x){ o[f] = !v; renderOrders(); toast('Non salvato, riprova'); }
+};
 $('lmore').onclick = () => { allL=true; render(); };
 $('cmore').onclick = () => { allC=true; render(); };
 load();
