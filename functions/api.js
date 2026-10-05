@@ -2,8 +2,9 @@
  * OviAmo – motore su Cloudflare (Pages Function + database D1)
  * Indirizzo: /api   (GET ?action=info|report|area, POST con JSON)
  * Segreti da impostare in Cloudflare (Settings > Variables and Secrets):
- *   MASTER_KEY  = password del report
- *   NTFY_TOPIC  = nome del canale ntfy per gli avvisi (facoltativo)
+ *   MASTER_KEY      = password del report
+ *   TELEGRAM_TOKEN  = token del bot Telegram per gli avvisi (facoltativo)
+ * La chat Telegram a cui scrivere si collega dal report (azione 'tgLink'): scrivi al bot, poi collega.
  */
 
 const SITE = 'https://oviamo.boneggio.it';
@@ -50,12 +51,31 @@ async function settings_(db) {
   return { open: s.open !== '0', msg: s.msg || '' };
 }
 
-/* ---------- avvisi (ntfy) ----------
- * ntfy.sh rifiuta le richieste dai server Cloudflare (IP condivisi), quindi l'avviso
- * lo manda il browser di chi prenota: qui prepariamo solo il messaggio. */
+/* ---------- avvisi (Telegram) ---------- */
 
-function notice(env, title, message) {
-  return env.NTFY_TOPIC ? { topic: env.NTFY_TOPIC, title, message, tags: ['egg'], click: SITE + '/report.html' } : null;
+const tgApi = (env, method, body) => fetch('https://api.telegram.org/bot' + env.TELEGRAM_TOKEN + '/' + method, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {})
+}).then(r => r.json());
+
+async function telegram(env, db, text) {
+  if (!env.TELEGRAM_TOKEN) return false;
+  const c = await db.prepare("SELECT v FROM settings WHERE k = 'tg_chat'").first();
+  if (!c || !c.v) return false;
+  try { return (await tgApi(env, 'sendMessage', { chat_id: c.v, text, disable_web_page_preview: true })).ok; }
+  catch (err) { return false; }
+}
+
+/** Collega la chat: prende l'ultima persona che ha scritto al bot e le manda una conferma */
+async function tgLink_(db, env) {
+  if (!env.TELEGRAM_TOKEN) return json({ ok: false, error: 'Manca il segreto TELEGRAM_TOKEN su Cloudflare' });
+  const up = await tgApi(env, 'getUpdates', { limit: 100 });
+  if (!up.ok) return json({ ok: false, error: 'Telegram: ' + (up.description || 'token non valido') });
+  const msgs = (up.result || []).map(u => u.message || u.edited_message || u.my_chat_member).filter(m => m && m.chat);
+  if (!msgs.length) return json({ ok: false, error: 'Scrivi prima un messaggio al bot su Telegram (es. "ciao"), poi riprova.' });
+  const chat = msgs[msgs.length - 1].chat;
+  await db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('tg_chat', ?)").bind(String(chat.id)).run();
+  const sent = await tgApi(env, 'sendMessage', { chat_id: chat.id, text: '🥚 OviAmo collegato! Qui riceverai un messaggio per ogni nuova prenotazione.' });
+  return json({ ok: !!sent.ok, chat: chat.first_name || chat.title || '', error: sent.ok ? undefined : sent.description });
 }
 
 /* ---------- GET ---------- */
@@ -116,6 +136,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
       case 'delOrders': return await delOrders_(db, d);
       case 'settings': return await saveSettings_(db, d);
       case 'userSave': return await userSave_(db, d);
+      case 'tgLink': return await tgLink_(db, env);
+      case 'tgTest': return json({ ok: await telegram(env, db, '🥚 OviAmo: messaggio di prova.') });
       case 'userDelete': await db.prepare('DELETE FROM users WHERE tk = ?').bind(String(d.tk)).run(); return json({ ok: true, users: await users_(db) });
     }
     return json({ ok: false, error: 'Azione sconosciuta' });
@@ -160,13 +182,13 @@ async function order_(db, env, ctx, d) {
   const res = { ok: true, uova, euro, left: left - uova, satispay: SATISPAY_PHONE, perIl };
   if (rid) await db.prepare('INSERT OR REPLACE INTO idem (rid, res, ts) VALUES (?, ?, ?)').bind(rid, JSON.stringify(res), Date.now()).run();
 
-  res.notify = notice(env, 'OviAmo: ' + nome + ' ' + cognome + ' – ' + uova + ' uova',
+  await telegram(env, db, '🥚 OviAmo – nuova prenotazione\n' + nome + ' ' + cognome + ': ' + (uova === 1 ? '1 uovo' : uova + ' uova') + '\n' +
     (q6 ? q6 + ' confezioni da 6' + (q1 ? ' + ' + q1 + ' singole' : '') : q1 + ' singole') +
     ' · ' + euro.toFixed(2).replace('.', ',') + ' €' +
     (perIl ? '\nPer il: ' + perIl.split('-').reverse().join('/') : '') +
     (telefono ? '\nTel: ' + telefono : '') +
     (note ? '\nNote: ' + note : '') +
-    '\nUova ancora disponibili: ' + (left - uova));
+    '\nUova ancora disponibili: ' + (left - uova) + '\n' + SITE + '/report.html');
   return json(res);
 }
 
