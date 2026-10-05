@@ -64,6 +64,11 @@ input:focus{outline:2px solid var(--yolk);outline-offset:1px;border-color:transp
 .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:99px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:600 .85rem Inter,sans-serif;cursor:pointer}
 .chip .dot{width:16px;height:16px;border-radius:50%;border:2px solid currentColor;display:inline-grid;place-items:center;font-size:.7rem;line-height:1}
 .chip.on{border-color:var(--brand-2);color:var(--brand);background:color-mix(in srgb,var(--brand-2) 14%,var(--card))}
+.qu{display:flex;gap:6px}.qu input{min-width:0}
+.qu select{flex:none;padding:11px 8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+.chip .ic{width:20px;height:14px;display:inline-block}
+.chip .ic.sp{width:17px;height:17px;border-radius:5px;background:#e8433d;color:#fff;font:800 .68rem/17px Inter,sans-serif;text-align:center}
+.chip.pm:not(.on) .ic{filter:grayscale(1);opacity:.55}
 .chip.on .dot{background:var(--brand-2);border-color:var(--brand-2);color:#fff}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:10px}
 .seg button{border:0;background:transparent;color:var(--ink);padding:7px 11px;font:500 .85rem Inter,sans-serif;cursor:pointer}
@@ -136,9 +141,10 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
     <h2>🌾 Costi (mangime e altro)</h2>
     <form id="fc">
       <div class="grid">
-        <div class="field"><label for="cdsc">Descrizione</label><input id="cdsc" maxlength="120" placeholder="Es. mangime 25 kg" list="cdl"><datalist id="cdl"></datalist></div>
-        <div class="field"><label for="cimp">Importo €</label><input id="cimp" inputmode="decimal" placeholder="0,00"></div>
+        <div class="field"><label for="cdsc">Descrizione</label><input id="cdsc" maxlength="120" placeholder="Es. mangime" list="cdl"><datalist id="cdl"></datalist></div>
+        <div class="field"><label for="cq">Quantità <span class="opt">(facoltativa)</span></label><div class="qu"><input id="cq" inputmode="decimal" placeholder="es. 25"><select id="cu" aria-label="Unità"><option value="kg">kg</option><option value="pz">pz</option><option value="l">litri</option></select></div></div>
       </div>
+      <div class="field"><label for="cimp">Importo €</label><input id="cimp" inputmode="decimal" placeholder="0,00"></div>
       <div class="field"><label for="cd">Giorno</label><input id="cd" type="date"></div>
       <button class="btn" id="cgo">Aggiungi il costo</button>
     </form>
@@ -195,7 +201,7 @@ function render(){
   $('costCard').hidden = false; $('chartCard').hidden = false; $('ordCard').hidden = false; $('henCard').hidden = false;
   renderOrders(); renderHens();
   const C = [...D.costs].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
-  $('costs').innerHTML = (allC?C:C.slice(0,8)).map(c=>`<div class="it"><span class="d">${dIt(c.data)}</span><span>${esc(c.descr)} <span class="w">${esc(c.utente)}</span></span><b>${eur(c.euro)}</b>${c.utente===D.nome?`<button class="x" data-del="cost" data-id="${esc(c.id)}" aria-label="Cancella">×</button>`:'<span></span>'}</div>`).join('') || '<p class="empty">Ancora nessun costo.</p>';
+  $('costs').innerHTML = (allC?C:C.slice(0,8)).map(c=>`<div class="it"><span class="d">${dIt(c.data)}</span><span>${esc(c.descr)}${c.qta?` <span class="w">${String(c.qta).replace('.',',')} ${c.unita} · ${eur(c.euro/c.qta)}/${c.unita}</span>`:''} <span class="w">${esc(c.utente)}</span></span><b>${eur(c.euro)}</b>${c.utente===D.nome?`<button class="x" data-del="cost" data-id="${esc(c.id)}" aria-label="Cancella">×</button>`:'<span></span>'}</div>`).join('') || '<p class="empty">Ancora nessun costo.</p>';
   $('cmore').hidden = allC || C.length <= 8;
   $('cdl').innerHTML = [...new Set(C.map(c=>c.descr))].slice(0,12).map(s=>`<option value="${esc(s)}">`).join('');
   const cd = {sales:D.sales, costs:D.costs, loads:D.loads, hens:D.hens||[]};
@@ -228,9 +234,9 @@ $('fc').onsubmit = async e => {
   if(imp<=0) return toast('Scrivi l\'importo');
   const b=$('cgo'); b.disabled=true;
   try{
-    const j = await post({action:'cost', importo:imp, descr, data:$('cd').value});
+    const j = await post({action:'cost', importo:imp, descr, data:$('cd').value, qta:$('cq').value.trim(), unita:$('cu').value});
     if(!j.ok) throw new Error(j.error);
-    toast('Costo aggiunto: '+eur(imp)); $('cimp').value=''; $('cdsc').value=''; await load();
+    toast('Costo aggiunto: '+eur(imp)); $('cimp').value=''; $('cdsc').value=''; $('cq').value=''; await load();
   }catch(x){ toast(x.message||'Non salvato, riprova'); }
   finally{ b.disabled=false; }
 };
@@ -260,7 +266,9 @@ function renderOrders(){
     <div class="e">${eur(o.euro)}</div>
     ${o.note?`<div class="nt">“${esc(o.note)}”</div>`:''}
     <div class="flags">
-      <button class="chip ${o.pagato?'on':''}" data-oid="${esc(o.id)}" data-f="pagato" aria-pressed="${o.pagato}"><span class="dot">${o.pagato?'✓':''}</span>Pagato</button>
+      <button class="chip pm ${o.pagato&&o.metodo==='contanti'?'on':''}" data-oid="${esc(o.id)}" data-f="pagato" data-m="contanti" aria-pressed="${o.pagato&&o.metodo==='contanti'}"><svg class="ic" viewBox="0 0 24 16" aria-hidden="true"><rect x="1" y="1" width="22" height="14" rx="2.5" fill="#cfe8bf" stroke="#3f7a2a" stroke-width="1.6"/><circle cx="12" cy="8" r="3.4" fill="none" stroke="#3f7a2a" stroke-width="1.6"/><circle cx="5" cy="8" r="1.1" fill="#3f7a2a"/><circle cx="19" cy="8" r="1.1" fill="#3f7a2a"/></svg>Contanti</button>
+      <button class="chip pm ${o.pagato&&o.metodo==='satispay'?'on':''}" data-oid="${esc(o.id)}" data-f="pagato" data-m="satispay" aria-pressed="${o.pagato&&o.metodo==='satispay'}"><span class="ic sp">S</span>Satispay</button>
+      ${o.pagato&&!o.metodo?'<span class="chip on" style="cursor:default"><span class="dot">✓</span>Pagato</span>':''}
       <button class="chip ${o.consegnato?'on':''}" data-oid="${esc(o.id)}" data-f="consegnato" aria-pressed="${o.consegnato}"><span class="dot">${o.consegnato?'✓':''}</span>Consegnato</button>
     </div></div>`).join('') || `<p class="empty">${O.length ? 'Nessuna prenotazione in questo elenco.' : 'Ancora nessuna prenotazione.'}</p>`;
   $('omore').hidden = allO || V.length <= 15;
@@ -271,14 +279,16 @@ $('omore').onclick = () => { allO=true; renderOrders(); };
 $('ords').onclick = async e => {
   const b = e.target.closest('button.chip'); if(!b) return;
   const o = D.orders.find(x=>x.id===b.dataset.oid); if(!o) return;
-  const f = b.dataset.f, v = !o[f];
-  o[f] = v; renderOrders();
+  const f = b.dataset.f, m = b.dataset.m || '';
+  const v = f==='pagato' ? !(o.pagato && o.metodo===m) : !o[f];
+  const old = [o[f], o.metodo];
+  o[f] = v; if (f==='pagato') o.metodo = v ? m : ''; renderOrders();
   try{
-    const j = await post({action:'flag', ids:[o.id], field:f, value:v});
+    const j = await post({action:'flag', ids:[o.id], field:f, value:v, metodo:m});
     if(!j.ok || !j.updated) throw new Error(j.error||'non salvato');
-    toast(`${o.nome}: ${f==='pagato'?(v?'pagato':'da pagare'):(v?'consegnato':'da consegnare')}`);
+    toast(`${o.nome}: ${f==='pagato'?(v?(m==='satispay'?'pagato con Satispay':'pagato in contanti'):'da pagare'):(v?'consegnato':'da consegnare')}`);
     if (f==='pagato') load();   // aggiorna grafico e totali
-  }catch(x){ o[f] = !v; renderOrders(); toast('Non salvato, riprova'); }
+  }catch(x){ [o[f], o.metodo] = old; renderOrders(); toast('Non salvato, riprova'); }
 };
 
 // ----- galline (solo intermedio) -----
