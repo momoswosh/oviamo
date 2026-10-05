@@ -50,17 +50,12 @@ async function settings_(db) {
   return { open: s.open !== '0', msg: s.msg || '' };
 }
 
-/* ---------- avvisi (ntfy) ---------- */
+/* ---------- avvisi (ntfy) ----------
+ * ntfy.sh rifiuta le richieste dai server Cloudflare (IP condivisi), quindi l'avviso
+ * lo manda il browser di chi prenota: qui prepariamo solo il messaggio. */
 
-async function notify(env, title, message) {
-  if (!env.NTFY_TOPIC) return 'no-topic';
-  try {
-    const r = await fetch('https://ntfy.sh/', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic: env.NTFY_TOPIC, title, message, tags: ['egg'], click: SITE + '/report.html' })
-    });
-    return r.status;
-  } catch (err) { return 'err: ' + (err && err.message || err); }
+function notice(env, title, message) {
+  return env.NTFY_TOPIC ? { topic: env.NTFY_TOPIC, title, message, tags: ['egg'], click: SITE + '/report.html' } : null;
 }
 
 /* ---------- GET ---------- */
@@ -165,7 +160,7 @@ async function order_(db, env, ctx, d) {
   const res = { ok: true, uova, euro, left: left - uova, satispay: SATISPAY_PHONE, perIl };
   if (rid) await db.prepare('INSERT OR REPLACE INTO idem (rid, res, ts) VALUES (?, ?, ?)').bind(rid, JSON.stringify(res), Date.now()).run();
 
-  res.ntfy = await notify(env, 'OviAmo: ' + nome + ' ' + cognome + ' – ' + uova + ' uova',
+  res.notify = notice(env, 'OviAmo: ' + nome + ' ' + cognome + ' – ' + uova + ' uova',
     (q6 ? q6 + ' confezioni da 6' + (q1 ? ' + ' + q1 + ' singole' : '') : q1 + ' singole') +
     ' · ' + euro.toFixed(2).replace('.', ',') + ' €' +
     (perIl ? '\nPer il: ' + perIl.split('-').reverse().join('/') : '') +
