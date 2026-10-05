@@ -164,7 +164,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
 
 <script src="grafico.js"></script>
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXhUeNMN3RY65D-oPb6SxqTdgVZuZpA6em0BwmE9yyWn0u5FylQz2FVdI5outJomuK/exec';
+const SCRIPT_URL = '/api';   // motore su Cloudflare (functions/api.js)
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const eur = n => (n||0).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
