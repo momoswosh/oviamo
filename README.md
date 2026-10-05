@@ -8,3 +8,5 @@ Prenotazione delle uova fresche – https://oviamo.boneggio.it
 - `grafico.js` – grafico vendite / costi
 
 I dati stanno in un Foglio Google, gestito da uno script Google Apps Script.
+
+_Ultimo aggiornamento: 5 ottobre 2026_
