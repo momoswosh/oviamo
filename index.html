@@ -91,6 +91,13 @@ input:focus,textarea:focus{outline:2px solid var(--yolk);outline-offset:1px;bord
 .done .logo{width:120px;filter:none;animation:pop .5s ease-out}
 @keyframes pop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
 .done p{color:var(--muted)}
+.pay{margin:18px 0 14px;padding:16px;border:1.5px solid var(--line);border-radius:16px;background:var(--bg);text-align:left}
+.pay h3{margin:0 0 4px;font-family:Fraunces,Georgia,serif;font-size:1.1rem;display:flex;align-items:center;gap:8px}
+.pay h3 .s{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:7px;background:#e8433d;color:#fff;font:800 .8rem Inter,sans-serif}
+.pay p{margin:0 0 12px;font-size:.92rem}
+.num{display:flex;align-items:center;gap:8px}
+.num b{flex:1;min-width:0;white-space:nowrap;font-size:1.25rem;letter-spacing:.04em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.num button{flex:none;border:0;background:#e8433d;color:#fff;border-radius:10px;padding:10px 14px;font:600 .9rem Inter,sans-serif;cursor:pointer}
 .link{background:none;border:0;color:var(--brand);font:inherit;text-decoration:underline;cursor:pointer}
 footer{text-align:center;margin-top:28px}
 .fname{display:block;font-family:Fraunces,Georgia,serif;font-weight:800;font-size:1.8rem;line-height:1;color:var(--brand);letter-spacing:-.015em}
@@ -194,6 +201,11 @@ footer{text-align:center;margin-top:28px}
     <img class="logo" src="logo.svg" alt="">
     <h2 style="justify-content:center">Grazie <span id="dn"></span>!</h2>
     <p>Abbiamo ricevuto la tua prenotazione di <b id="dk"></b>,<br>per un totale di <b id="de"></b>.</p>
+    <div class="pay" id="pay" hidden>
+      <h3><span class="s">S</span>Vuoi pagare con Satispay?</h3>
+      <p>Apri Satispay e invia <b id="pe"></b> a questo numero:</p>
+      <div class="num"><b id="pn"></b><button type="button" id="pcopy">Copia numero</button></div>
+    </div>
     <button class="link" id="again">Fai un'altra prenotazione</button>
   </div>
 
@@ -263,12 +275,21 @@ $('f').addEventListener('submit', async e => {
     RID = '';
     if(!j.ok){ loadInfo(); return err(j.error||'Errore'); }
     $('dn').textContent=nome; $('dk').textContent=j.uova===1?'1 uovo':j.uova+' uova'; $('de').textContent=eur(j.euro);
+    $('pay').hidden = !j.satispay;
+    if (j.satispay) { $('pn').textContent = String(j.satispay).replace(/^(\d{3})(\d{3})(\d+)$/,'$1 $2 $3'); $('pn').dataset.n = j.satispay; $('pe').textContent = eur(j.euro); }
     $('f').style.display='none'; document.querySelector('.welcome').style.display='none';
     $('done').style.display='block'; window.scrollTo({top:0,behavior:'smooth'});
     if(j.left != null){ AVAIL = j.left; $('availN').textContent = AVAIL; }
   }catch(x){ err('Non siamo riusciti a inviare la prenotazione. Riprova tra poco. ('+x.message+')'); }
   finally{ btn.disabled=false; btn.textContent='Prenota le uova'; }
 });
+
+$('pcopy').onclick = async () => {
+  const b=$('pcopy'), t=$('pn').dataset.n;
+  try { await navigator.clipboard.writeText(t); }
+  catch(e){ const r=document.createRange(); r.selectNodeContents($('pn')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); }
+  b.textContent='Copiato ✓'; setTimeout(()=>b.textContent='Copia numero',2000);
+};
 
 $('again').onclick = () => {
   $('f').reset(); q[1]=0; q[6]=0; render();
