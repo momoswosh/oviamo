@@ -191,6 +191,8 @@ footer{text-align:center;margin-top:28px}
 
     <div class="total"><span>Totale <small id="totN">0 uova</small></span><span id="tot">0,00 €</span></div>
 
+    <div class="field"><label for="perIl">Per quando ti servono? <span class="opt">(facoltativo)</span></label><input id="perIl" type="date"></div>
+
     <div class="field"><label for="note">Note <span class="opt">(facoltative)</span></label><textarea id="note" rows="2" maxlength="500" placeholder="Vuoi dirmi qualcosa?"></textarea></div>
 
     <button class="btn" id="go" type="submit">Prenota le uova</button>
@@ -200,7 +202,7 @@ footer{text-align:center;margin-top:28px}
   <div class="card done" id="done">
     <img class="logo" src="logo.svg" alt="">
     <h2 style="justify-content:center">Grazie <span id="dn"></span>!</h2>
-    <p>Abbiamo ricevuto la tua prenotazione di <b id="dk"></b>,<br>per un totale di <b id="de"></b>.</p>
+    <p>Abbiamo ricevuto la tua prenotazione di <b id="dk"></b>,<br>per un totale di <b id="de"></b>.<span id="dpi"></span></p>
     <div class="pay" id="pay" hidden>
       <h3><span class="s">S</span>Vuoi pagare con Satispay?</h3>
       <p>Apri Satispay e invia <b id="pe"></b> a questo numero:</p>
@@ -258,6 +260,7 @@ async function loadInfo(){
   }catch(e){ /* senza info il modulo funziona lo stesso: il controllo lo fa il server */ }
 }
 loadInfo();
+{ const d=new Date(), p=n=>String(n).padStart(2,'0'); $('perIl').min = d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 
 $('f').addEventListener('submit', async e => {
   e.preventDefault(); $('msg').className='msg';
@@ -267,7 +270,7 @@ $('f').addEventListener('submit', async e => {
   const btn=$('go'); btn.disabled=true; btn.textContent='Invio in corso…';
   try{
     RID = RID || (Date.now().toString(36) + Math.random().toString(36).slice(2));
-    const body = JSON.stringify({rid:RID,nome,cognome,telefono:$('telefono').value.trim(),note:$('note').value.trim(),q1:q[1],q6:q[6]});
+    const body = JSON.stringify({rid:RID,nome,cognome,telefono:$('telefono').value.trim(),note:$('note').value.trim(),perIl:$('perIl').value,q1:q[1],q6:q[6]});
     const send = () => fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body}).then(r=>r.json());
     let j;
     try { j = await send(); }
@@ -275,6 +278,7 @@ $('f').addEventListener('submit', async e => {
     RID = '';
     if(!j.ok){ loadInfo(); return err(j.error||'Errore'); }
     $('dn').textContent=nome; $('dk').textContent=j.uova===1?'1 uovo':j.uova+' uova'; $('de').textContent=eur(j.euro);
+    $('dpi').innerHTML = j.perIl ? '<br>Le prepariamo per <b>' + new Date(j.perIl+'T12:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'}) + '</b>.' : '';
     $('pay').hidden = !j.satispay;
     if (j.satispay) { $('pn').textContent = String(j.satispay).replace(/^(\+\d{2})?(\d{3})(\d{3})(\d+)$/,(m,p,x,y,z)=>(p?p+' ':'')+x+' '+y+' '+z); $('pn').dataset.n = j.satispay; $('pe').textContent = eur(j.euro); }
     $('f').style.display='none'; document.querySelector('.welcome').style.display='none';
