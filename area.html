@@ -262,7 +262,7 @@ function renderOrders(){
   const V = O.filter(o => of==='np' ? !o.pagato : of==='nc' ? !o.consegnato : true).sort((a,b)=>b.data.localeCompare(a.data));
   const vis = allO ? V : V.slice(0,15);
   $('ords').innerHTML = vis.map(o=>`<div class="ord ${o.pagato&&o.consegnato?'done':''}">
-    <div><h3>${esc(o.nome)} ${esc(o.cognome)}</h3><div class="w">${dIt(o.data)} · ${o.uova} uova (${uovaTxt(o)})${o.telefono?` · <a href="tel:${esc(o.telefono)}" style="color:inherit">${esc(o.telefono)}</a>`:''}</div></div>
+    <div><h3>${esc(o.nome)} ${esc(o.cognome)}</h3><div class="w">${o.perIl?`<b style="color:var(--brand)">per ${new Date(o.perIl+'T12:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'numeric'})}</b> · `:''}${dIt(o.data)} · ${o.uova} uova (${uovaTxt(o)})${o.telefono?` · <a href="tel:${esc(o.telefono)}" style="color:inherit">${esc(o.telefono)}</a>`:''}</div></div>
     <div class="e">${eur(o.euro)}</div>
     ${o.note?`<div class="nt">“${esc(o.note)}”</div>`:''}
     <div class="flags">
