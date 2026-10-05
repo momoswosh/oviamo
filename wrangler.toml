@@ -1,0 +1,9 @@
+# Configurazione Cloudflare Pages per OviAmo
+name = "oviamo"
+pages_build_output_dir = "."
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "oviamo"
+database_id = "8964cf9d-c48a-42a0-aa23-c1005da44727"
