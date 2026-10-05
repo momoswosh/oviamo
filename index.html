@@ -277,6 +277,7 @@ $('f').addEventListener('submit', async e => {
     catch(e1){ await new Promise(r=>setTimeout(r,1500)); j = await send(); }   // secondo tentativo: il server non duplica
     RID = '';
     if(!j.ok){ loadInfo(); return err(j.error||'Errore'); }
+    if(j.notify) fetch('https://ntfy.sh/',{method:'POST',body:JSON.stringify(j.notify),keepalive:true}).catch(()=>{});   // avviso al gestore
     $('dn').textContent=nome; $('dk').textContent=j.uova===1?'1 uovo':j.uova+' uova'; $('de').textContent=eur(j.euro);
     $('dpi').innerHTML = j.perIl ? '<br>Le prepariamo per <b>' + new Date(j.perIl+'T12:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'}) + '</b>.' : '';
     $('pay').hidden = !j.satispay;
