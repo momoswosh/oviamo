@@ -86,6 +86,17 @@ tfoot td{font-weight:600}
 @media (max-width:700px){.fb{grid-column:1/-1}}
 .x:hover{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err)}
 .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:.78rem;font-weight:600;background:var(--bg)}
+.pay2{display:inline-flex;gap:4px}
+.pay2 button{display:inline-grid;place-items:center;width:36px;height:30px;border-radius:8px;border:1.5px solid var(--line);background:var(--card);cursor:pointer;opacity:.4;filter:grayscale(1);padding:0}
+.pay2 button:hover{opacity:.8;filter:none}
+.pay2 button.on{opacity:1;filter:none;border-color:var(--brand-2);background:color-mix(in srgb,var(--brand-2) 14%,var(--card))}
+.pay2{align-items:center}.pay2 .okm{color:var(--brand);margin-right:2px}
+.ic{width:22px;height:15px;display:inline-block;vertical-align:-2px}
+.ic.sp{width:18px;height:18px;border-radius:5px;background:#e8433d;color:#fff;font:800 .72rem/18px Inter,sans-serif;text-align:center}
+.kpi .sub{display:block;margin-top:3px;font-size:.75rem;color:var(--muted);white-space:nowrap}
+.kpi .sub .ic{width:16px;height:11px}.kpi .sub .ic.sp{width:13px;height:13px;font-size:.55rem;line-height:13px;border-radius:4px;vertical-align:-1px}
+.qu{display:flex;gap:4px}.qu input{min-width:0}.qu select{flex:none;width:auto;padding-left:8px;padding-right:4px}
+.cq{color:var(--muted);font-size:.85rem;white-space:nowrap}
 .pill.i{background:color-mix(in srgb,var(--yolk) 25%,var(--bg))}
 .ub{display:flex;gap:6px;flex-wrap:wrap}
 .ub .btn{padding:6px 10px;font-size:.8rem}
@@ -141,7 +152,8 @@ tfoot td{font-weight:600}
         </div>
         <div class="sel" id="selBar" hidden>
           <b id="selN"></b><span class="sp" style="flex:1"></span>
-          <button class="btn ghost" data-bulk="pagato">Segna pagate</button>
+          <button class="btn ghost" data-bulk="pagato" data-m="contanti">Pagate in contanti</button>
+          <button class="btn ghost" data-bulk="pagato" data-m="satispay">Pagate con Satispay</button>
           <button class="btn ghost" data-bulk="consegnato">Segna consegnate</button>
           <button class="btn red" id="bulkDel">Elimina</button>
         </div>
@@ -166,13 +178,14 @@ tfoot td{font-weight:600}
       <!-- COSTI -->
       <div data-p="cos" hidden>
         <form class="form" id="fc">
-          <div style="grid-column:span 2"><label for="cdsc">Descrizione</label><input id="cdsc" maxlength="120" placeholder="Es. mangime 25 kg"></div>
+          <div><label for="cdsc">Descrizione</label><input id="cdsc" maxlength="120" placeholder="Es. mangime"></div>
+          <div><label for="cq">Quantità <span style="font-weight:400;color:var(--muted)">(facolt.)</span></label><div class="qu"><input id="cq" inputmode="decimal" placeholder="es. 25"><select id="cu" aria-label="Unità"><option value="kg">kg</option><option value="pz">pz</option><option value="l">litri</option></select></div></div>
           <div><label for="cimp">Importo €</label><input id="cimp" inputmode="decimal" placeholder="0,00"></div>
           <div><label for="cd">Giorno</label><input id="cd" type="date"></div>
           <button class="btn">Aggiungi</button>
         </form>
         <div class="sum" id="csum"></div>
-        <div class="tw"><table><thead><tr><th>Giorno</th><th>Descrizione</th><th>Chi</th><th class="n">Importo</th><th></th></tr></thead><tbody id="ctb"></tbody></table></div>
+        <div class="tw"><table><thead><tr><th>Giorno</th><th>Descrizione</th><th>Quantità</th><th>Chi</th><th class="n">Importo</th><th></th></tr></thead><tbody id="ctb"></tbody></table></div>
       </div>
 
       <!-- UTENTI -->
@@ -213,7 +226,10 @@ tfoot td{font-weight:600}
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXhUeNMN3RY65D-oPb6SxqTdgVZuZpA6em0BwmE9yyWn0u5FylQz2FVdI5outJomuK/exec';
 const SITE = location.origin.startsWith('http') ? location.origin : 'https://oviamo.boneggio.it';
+const CASH = '<svg class="ic" viewBox="0 0 24 16" aria-hidden="true"><rect x="1" y="1" width="22" height="14" rx="2.5" fill="#cfe8bf" stroke="#3f7a2a" stroke-width="1.6"/><circle cx="12" cy="8" r="3.4" fill="none" stroke="#3f7a2a" stroke-width="1.6"/><circle cx="5" cy="8" r="1.1" fill="#3f7a2a"/><circle cx="19" cy="8" r="1.1" fill="#3f7a2a"/></svg>', SP = '<span class="ic sp">S</span>';
 const $ = id => document.getElementById(id);
+const UN = {kg:'kg', pz:'pz', l:'l'};
+const qtyTxt = c => c.qta ? `${String(c.qta).replace('.',',')} ${UN[c.unita]||c.unita} · ${eur(c.euro/c.qta)}/${UN[c.unita]||c.unita}` : '';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const eur = n => (n||0).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
 const dIt = s => { const p=String(s).slice(0,10).split('-'); return p.length===3 ? `${+p[2]}/${+p[1]}/${p[0].slice(2)}` : s; };
@@ -250,10 +266,10 @@ function render(){
     ['Uova disponibili', D.available, 'hl'],
     ['Uova da consegnare', sum(notDel,'uova')],
     ['Da incassare', eur(sum(O,'euro')-inc)],
-    ['Incassato', eur(inc)],
+    ['Incassato', eur(inc), '', `<span class="sub">${CASH} ${eur(sum(paid.filter(o=>o.metodo==='contanti'),'euro'))} · ${SP} ${eur(sum(paid.filter(o=>o.metodo==='satispay'),'euro'))}</span>`],
     ['Costi', eur(costi)],
     ['Margine', `<span class="${inc-costi<0?'neg':''}">${eur(inc-costi)}</span>`]
-  ].map(([l,v,c])=>`<div class="card kpi ${c||''}"><small>${l}</small><b>${v}</b></div>`).join('');
+  ].map(([l,v,c,x])=>`<div class="card kpi ${c||''}"><small>${l}</small><b>${v}</b>${x||''}</div>`).join('');
 
   $('open').checked = D.settings.open; $('msg').value = D.settings.msg || '';
   $('openL').textContent = D.settings.open ? 'Prenotazioni aperte' : 'Prenotazioni chiuse';
@@ -285,7 +301,7 @@ function renderOrders(){
     <td>${o.telefono?`<a href="tel:${esc(o.telefono)}" style="color:inherit">${esc(o.telefono)}</a>`:''}</td>
     <td class="n"><b>${o.uova}</b><div class="d" style="font-size:.78rem">${uovaTxt(o)}</div></td>
     <td class="n">${eur(o.euro)}</td>
-    <td class="c"><input type="checkbox" data-flag="pagato" data-id="${esc(o.id)}" ${o.pagato?'checked':''} aria-label="Pagato"></td>
+    <td class="c"><span class="pay2 ${o.pagato&&!o.metodo?'old':''}" title="${o.pagato?(o.metodo==='satispay'?'Pagato con Satispay':o.metodo==='contanti'?'Pagato in contanti':'Pagato'):'Da pagare'}">${o.pagato&&!o.metodo?'<b class="okm">✓</b>':''}<button data-pay="contanti" data-id="${esc(o.id)}" class="${o.pagato&&o.metodo==='contanti'?'on':''}" aria-label="Pagato in contanti">${CASH}</button><button data-pay="satispay" data-id="${esc(o.id)}" class="${o.pagato&&o.metodo==='satispay'?'on':''}" aria-label="Pagato con Satispay">${SP}</button></span></td>
     <td class="c"><input type="checkbox" data-flag="consegnato" data-id="${esc(o.id)}" ${o.consegnato?'checked':''} aria-label="Consegnato"></td>
   </tr>`).join('') || `<tr><td colspan="8" class="empty">Nessuna prenotazione.</td></tr>`;
   const s = (f)=>V.reduce((t,o)=>t+(+o[f]||0),0);
@@ -306,7 +322,7 @@ function renderCosts(){
   const C = [...D.costs].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
   const y = new Date().getFullYear()+'';
   $('csum').innerHTML = `<span>Totale: <b>${eur(C.reduce((t,c)=>t+c.euro,0))}</b></span><span>Nel ${y}: <b>${eur(C.filter(c=>c.data.startsWith(y)).reduce((t,c)=>t+c.euro,0))}</b></span>`;
-  $('ctb').innerHTML = C.map(c=>`<tr><td class="d">${dIt(c.data)}</td><td>${esc(c.descr)}</td><td>${esc(c.utente)}</td><td class="n"><b>${eur(c.euro)}</b></td><td class="c"><button class="x" data-del="delCost" data-id="${esc(c.id)}" aria-label="Cancella">×</button></td></tr>`).join('')
+  $('ctb').innerHTML = C.map(c=>`<tr><td class="d">${dIt(c.data)}</td><td>${esc(c.descr)}</td><td class="cq">${qtyTxt(c)}</td><td>${esc(c.utente)}</td><td class="n"><b>${eur(c.euro)}</b></td><td class="c"><button class="x" data-del="delCost" data-id="${esc(c.id)}" aria-label="Cancella">×</button></td></tr>`).join('')
     || `<tr><td colspan="5" class="empty">Nessun costo.</td></tr>`;
 }
 const link = u => `${SITE}/area.html?k=${u.tk}`;
@@ -340,13 +356,13 @@ document.addEventListener('change', async e => {
   if (t.id === 'all'){ ordersView().forEach(o => t.checked ? sel.add(o.id) : sel.delete(o.id)); renderOrders(); return; }
   if (t.dataset.flag) flag([t.dataset.id], t.dataset.flag, t.checked);
 });
-async function flag(ids, field, value){
-  const O = D.orders.filter(o=>ids.includes(o.id)), old = O.map(o=>o[field]);
-  O.forEach(o=>{ o[field]=value; if(field==='pagato') o.dataPag = value ? today() : ''; }); render();
-  try{ const j = await post({action:'flag', ids, field, value}); if(!j.ok) throw new Error(j.error); }
-  catch(x){ O.forEach((o,i)=>o[field]=old[i]); render(); toast('Non salvato, riprova'); }
+async function flag(ids, field, value, metodo){
+  const O = D.orders.filter(o=>ids.includes(o.id)), old = O.map(o=>[o[field],o.dataPag,o.metodo]);
+  O.forEach(o=>{ o[field]=value; if(field==='pagato'){ o.dataPag = value ? today() : ''; o.metodo = value ? (metodo||'') : ''; } }); render();
+  try{ const j = await post({action:'flag', ids, field, value, metodo}); if(!j.ok) throw new Error(j.error); }
+  catch(x){ O.forEach((o,i)=>{ [o[field],o.dataPag,o.metodo]=old[i]; }); render(); toast('Non salvato, riprova'); }
 }
-document.querySelectorAll('[data-bulk]').forEach(b => b.onclick = () => { flag([...sel], b.dataset.bulk, true); sel.clear(); renderOrders(); });
+document.querySelectorAll('[data-bulk]').forEach(b => b.onclick = () => { flag([...sel], b.dataset.bulk, true, b.dataset.m); sel.clear(); renderOrders(); });
 $('bulkDel').onclick = async () => {
   const ids = [...sel]; if(!confirm(`Eliminare ${ids.length} prenotazioni? Le uova tornano disponibili.`)) return;
   try{ const j = await post({action:'delOrders', ids}); if(!j.ok) throw new Error(j.error); sel.clear(); await load(); toast(`Eliminate ${j.deleted}`); }catch(x){ toast(x.message); }
@@ -372,8 +388,8 @@ $('lminus').onclick = () => saveLoad(-1);
 $('fc').onsubmit = async e => { e.preventDefault();
   const imp = parseFloat($('cimp').value.replace(',','.'))||0, descr=$('cdsc').value.trim();
   if(!descr) return toast('Scrivi una descrizione'); if(imp<=0) return toast('Scrivi l\'importo');
-  try{ const j = await post({action:'cost', importo:imp, descr, data:$('cd').value}); if(!j.ok) throw new Error(j.error);
-    $('cimp').value=''; $('cdsc').value=''; await load(); toast('Costo aggiunto'); }catch(x){ toast(x.message); } };
+  try{ const j = await post({action:'cost', importo:imp, descr, data:$('cd').value, qta:$('cq').value.trim(), unita:$('cu').value}); if(!j.ok) throw new Error(j.error);
+    $('cimp').value=''; $('cdsc').value=''; $('cq').value=''; await load(); toast('Costo aggiunto'); }catch(x){ toast(x.message); } };
 
 
 function renderHens(){
@@ -399,6 +415,9 @@ $('ucancel').onclick = resetUser;
 document.addEventListener('click', async e => {
   const b = e.target.closest('button'); if(!b) return;
   const d = b.dataset;
+  if (d.pay){ const o = D.orders.find(x=>x.id===d.id); if(!o) return;
+    if (o.pagato && o.metodo===d.pay) flag([o.id],'pagato',false); else flag([o.id],'pagato',true,d.pay);
+    return; }
   if (d.del){ if(!confirm('Cancellare questa riga?')) return;
     try{ const j = await post({action:d.del, id:d.id}); if(!j.ok) throw new Error(j.error||'Non cancellato'); await load(); toast('Cancellato'); }catch(x){ toast(x.message); } }
   if (d.copy){ const u = D.users.find(x=>x.tk===d.copy);
