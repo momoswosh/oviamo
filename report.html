@@ -251,7 +251,7 @@ tfoot td{font-weight:600}
 
 <script src="grafico.js"></script>
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXhUeNMN3RY65D-oPb6SxqTdgVZuZpA6em0BwmE9yyWn0u5FylQz2FVdI5outJomuK/exec';
+const SCRIPT_URL = '/api';   // motore su Cloudflare (functions/api.js)
 const SITE = location.origin.startsWith('http') ? location.origin : 'https://oviamo.boneggio.it';
 const CASH = '<svg class="ic" viewBox="0 0 24 16" aria-hidden="true"><rect x="1" y="1" width="22" height="14" rx="2.5" fill="#cfe8bf" stroke="#3f7a2a" stroke-width="1.6"/><circle cx="12" cy="8" r="3.4" fill="none" stroke="#3f7a2a" stroke-width="1.6"/><circle cx="5" cy="8" r="1.1" fill="#3f7a2a"/><circle cx="19" cy="8" r="1.1" fill="#3f7a2a"/></svg>', SP = '<span class="ic sp">S</span>';
 const $ = id => document.getElementById(id);
