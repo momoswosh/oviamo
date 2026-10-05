@@ -97,6 +97,24 @@ tfoot td{font-weight:600}
 .kpi .sub .ic{width:16px;height:11px}.kpi .sub .ic.sp{width:13px;height:13px;font-size:.55rem;line-height:13px;border-radius:4px;vertical-align:-1px}
 .qu{display:flex;gap:4px}.qu input{min-width:0}.qu select{flex:none;width:auto;padding-left:8px;padding-right:4px}
 .cq{color:var(--muted);font-size:.85rem;white-space:nowrap}
+.calh{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.calh b{font-family:Fraunces,Georgia,serif;font-size:1.15rem;min-width:9.5em;text-align:center;text-transform:capitalize}
+.calh .nav{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;width:34px;height:32px;cursor:pointer;font-size:1.1rem}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .wd{font-size:.72rem;color:var(--muted);text-align:center;font-weight:600;text-transform:uppercase;padding:2px 0}
+.cal .day{min-height:78px;border:1px solid var(--line);border-radius:10px;padding:5px 6px;background:var(--card);cursor:pointer;text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.cal .day.out{opacity:.35}
+.cal .day.past{background:var(--bg)}
+.cal .day.today{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand)}
+.cal .day.cur{outline:2.5px solid var(--yolk);outline-offset:1px}
+.cal .day .dn{font-size:.8rem;font-weight:600;color:var(--muted)}
+.cal .day .eg{align-self:flex-start;border-radius:99px;padding:1px 7px;font-size:.75rem;font-weight:700;background:color-mix(in srgb,var(--yolk) 35%,var(--card));white-space:nowrap}
+.cal .day .eg.ok{background:color-mix(in srgb,var(--brand-2) 22%,var(--card));color:var(--brand)}
+.cal .day .nm{font-size:.72rem;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:560px){.cal .day{min-height:52px;padding:4px}.cal .day .nm,.cal .day .u,.cald .tel{display:none}.cal .day .eg{font-size:.7rem;padding:1px 5px}}
+.cald{margin-top:14px}
+.cald h3{font-family:Fraunces,Georgia,serif;font-size:1.05rem;margin:0 0 8px;text-transform:capitalize}
+.peril{font-size:.78rem;color:var(--brand);font-weight:600;white-space:nowrap}
 .pill.i{background:color-mix(in srgb,var(--yolk) 25%,var(--bg))}
 .ub{display:flex;gap:6px;flex-wrap:wrap}
 .ub .btn{padding:6px 10px;font-size:.8rem}
@@ -134,6 +152,7 @@ tfoot td{font-weight:600}
     <section class="card">
       <nav class="tabs" id="tabs">
         <button data-t="pren" class="on">Prenotazioni<span class="c" id="cPren">0</span></button>
+        <button data-t="cal">Calendario<span class="c" id="cCal">0</span></button>
         <button data-t="car">Uova caricate<span class="c" id="cCar">0</span></button>
         <button data-t="cos">Costi<span class="c" id="cCos">0</span></button>
         <button data-t="gal">Galline<span class="c" id="cGal">–</span></button>
@@ -161,6 +180,14 @@ tfoot td{font-weight:600}
           <thead><tr><th class="c"><input type="checkbox" id="all" aria-label="Seleziona tutte"></th><th>Data</th><th>Nome</th><th>Telefono</th><th class="n">Uova</th><th class="n">€</th><th class="c">Pagato</th><th class="c">Consegnato</th></tr></thead>
           <tbody id="ptb"></tbody><tfoot id="ptf"></tfoot>
         </table></div>
+      </div>
+
+      <!-- CALENDARIO -->
+      <div data-p="cal" hidden>
+        <div class="calh"><button class="nav" id="calPrev" aria-label="Mese precedente">‹</button><b id="calT"></b><button class="nav" id="calNext" aria-label="Mese successivo">›</button><button class="btn ghost" id="calToday" style="margin-left:auto">Oggi</button></div>
+        <div class="sum" id="calSum"></div>
+        <div class="cal" id="cal"></div>
+        <div class="cald" id="calD"></div>
       </div>
 
       <!-- CARICHI -->
@@ -240,6 +267,8 @@ let KEY = store.get('ovk') || '', D = null, chart = null, tab = 'pren', pf = '',
 
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2400); }
 const post = body => fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:KEY,...body})}).then(r=>r.json());
+const dShort = s => new Date(s+'T12:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'numeric'});
+let calM = null, calSel = '';
 const uovaTxt = o => [o.q6?`${o.q6}×6`:'', o.q1?`${o.q1} sing.`:''].filter(Boolean).join(' + ');
 
 async function load(){
@@ -279,7 +308,7 @@ function render(){
 
   $('cPren').textContent = O.length; $('cCar').textContent = D.loads.length; $('cCos').textContent = D.costs.length; $('cUte').textContent = D.users.length;
   renderHens();
-  renderOrders(); renderLoads(); renderCosts(); renderUsers();
+  renderOrders(); renderCal(); renderLoads(); renderCosts(); renderUsers();
   const cd = { sales: paid.map(o=>({data:o.dataPag||o.data.slice(0,10), euro:o.euro, uova:o.uova})), costs:D.costs, loads:D.loads, hens:D.hens||[] };
   if (chart) chart.update(cd); else chart = OviChart($('chart'), cd);
 }
@@ -296,7 +325,7 @@ function renderOrders(){
   [...sel].forEach(id => { if(!D.orders.some(o=>o.id===id)) sel.delete(id); });
   $('ptb').innerHTML = V.map(o=>`<tr class="${o.pagato&&o.consegnato?'done':''}">
     <td class="c"><input type="checkbox" data-sel="${esc(o.id)}" ${sel.has(o.id)?'checked':''} aria-label="Seleziona"></td>
-    <td class="d">${dIt(o.data)}</td>
+    <td class="d">${dIt(o.data)}${o.perIl?`<div class="peril">per ${dShort(o.perIl)}</div>`:''}</td>
     <td><b>${esc(o.nome)} ${esc(o.cognome)}</b>${o.note?`<div class="note">“${esc(o.note)}”</div>`:''}</td>
     <td>${o.telefono?`<a href="tel:${esc(o.telefono)}" style="color:inherit">${esc(o.telefono)}</a>`:''}</td>
     <td class="n"><b>${o.uova}</b><div class="d" style="font-size:.78rem">${uovaTxt(o)}</div></td>
@@ -309,6 +338,33 @@ function renderOrders(){
   $('all').checked = V.length && V.every(o=>sel.has(o.id));
   $('selBar').hidden = !sel.size; $('selN').textContent = sel.size + (sel.size===1?' selezionata':' selezionate');
 }
+function renderCal(){
+  const td = today(); if (!calM) calM = td.slice(0,7); if (!calSel) calSel = td;
+  const byDay = {}; D.orders.forEach(o => { if (o.perIl) (byDay[o.perIl] = byDay[o.perIl] || []).push(o); });
+  const up = D.orders.filter(o => o.perIl && o.perIl >= td && !o.consegnato);
+  $('cCal').textContent = up.length;
+  const in7 = (()=>{ const d=new Date(td+'T12:00'); d.setDate(d.getDate()+6); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); })();
+  const noDate = D.orders.filter(o => !o.perIl && !o.consegnato);
+  $('calSum').innerHTML = `<span>Oggi: <b>${(byDay[td]||[]).filter(o=>!o.consegnato).reduce((t,o)=>t+o.uova,0)}</b> uova</span><span>Prossimi 7 giorni: <b>${up.filter(o=>o.perIl<=in7).reduce((t,o)=>t+o.uova,0)}</b> uova</span><span>Senza data, da consegnare: <b>${noDate.reduce((t,o)=>t+o.uova,0)}</b> uova</span>`;
+  const [y,m] = calM.split('-').map(Number), first = new Date(y, m-1, 1);
+  $('calT').textContent = first.toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+  const start = new Date(first); start.setDate(1 - ((first.getDay()+6)%7));
+  let h = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(w=>`<div class="wd">${w}</div>`).join('');
+  for (let i=0; i<42; i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const k = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    if (i===35 && d.getMonth()!==m-1) break;
+    const L = byDay[k] || [], eg = L.reduce((t,o)=>t+o.uova,0), done = L.length && L.every(o=>o.consegnato);
+    h += `<button class="day ${d.getMonth()!==m-1?'out':''} ${k<td?'past':''} ${k===td?'today':''} ${k===calSel?'cur':''}" data-day="${k}"><span class="dn">${d.getDate()}</span>${L.length?`<span class="eg ${done?'ok':''}">${done?'✓ ':''}${eg}<span class="u"> uova</span></span>`+L.slice(0,2).map(o=>`<span class="nm">${esc(o.nome)} ${esc(o.cognome)}</span>`).join('')+(L.length>2?`<span class="nm">+${L.length-2} altri</span>`:''):''}</button>`;
+  }
+  $('cal').innerHTML = h;
+  const S = (byDay[calSel]||[]).slice().sort((a,b)=>a.consegnato-b.consegnato);
+  $('calD').innerHTML = `<h3>${new Date(calSel+'T12:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</h3>` + (S.length ? `<div class="tw"><table><thead><tr><th>Nome</th><th class="tel">Telefono</th><th class="n">Uova</th><th class="n">€</th><th class="c">Pagato</th><th class="c">Consegnato</th></tr></thead><tbody>${S.map(o=>`<tr class="${o.pagato&&o.consegnato?'done':''}"><td><b>${esc(o.nome)} ${esc(o.cognome)}</b>${o.note?`<div class="note">“${esc(o.note)}”</div>`:''}</td><td class="tel">${o.telefono?`<a href="tel:${esc(o.telefono)}" style="color:inherit">${esc(o.telefono)}</a>`:''}</td><td class="n"><b>${o.uova}</b><div class="d" style="font-size:.78rem">${uovaTxt(o)}</div></td><td class="n">${eur(o.euro)}</td><td class="c"><span class="pay2">${o.pagato&&!o.metodo?'<b class="okm">✓</b>':''}<button data-pay="contanti" data-id="${esc(o.id)}" class="${o.pagato&&o.metodo==='contanti'?'on':''}" aria-label="Pagato in contanti">${CASH}</button><button data-pay="satispay" data-id="${esc(o.id)}" class="${o.pagato&&o.metodo==='satispay'?'on':''}" aria-label="Pagato con Satispay">${SP}</button></span></td><td class="c"><input type="checkbox" data-flag="consegnato" data-id="${esc(o.id)}" ${o.consegnato?'checked':''} aria-label="Consegnato"></td></tr>`).join('')}</tbody><tfoot><tr><td>${S.length} prenotazioni</td><td class="tel"></td><td class="n">${S.reduce((t,o)=>t+o.uova,0)}</td><td class="n">${eur(S.reduce((t,o)=>t+o.euro,0))}</td><td colspan="2"></td></tr></tfoot></table></div>` : '<p class="empty">Nessuna richiesta per questo giorno.</p>');
+}
+$('cal').onclick = e => { const b=e.target.closest('[data-day]'); if(!b) return; calSel=b.dataset.day; if(calSel.slice(0,7)!==calM) calM=calSel.slice(0,7); renderCal(); };
+const calMove = n => { const [y,m]=calM.split('-').map(Number), d=new Date(y,m-1+n,1); calM=d.getFullYear()+'-'+pad(d.getMonth()+1); renderCal(); };
+$('calPrev').onclick = () => calMove(-1); $('calNext').onclick = () => calMove(1);
+$('calToday').onclick = () => { calSel=today(); calM=calSel.slice(0,7); renderCal(); };
 function renderLoads(){
   const L = [...D.loads].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
   const by = {}; L.forEach(l=>by[l.utente]=(by[l.utente]||0)+l.uova);
