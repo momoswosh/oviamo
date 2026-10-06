@@ -256,13 +256,13 @@ document.addEventListener('click', async e => {
 // ----- prenotazioni (solo intermedio) -----
 const uovaTxt = o => [o.q6?`${o.q6}×6`:'', o.q1?`${o.q1} sing.`:''].filter(Boolean).join(' + ');
 function renderOrders(){
-  const O = D.orders || [], sum=(l,f)=>l.reduce((t,x)=>t+(+x[f]||0),0);
-  const np = O.filter(o=>!o.pagato), nc = O.filter(o=>!o.consegnato);
+  const O = (D.orders || []).filter(o=>o.stato!=='rifiutata'), sum=(l,f)=>l.reduce((t,x)=>t+(+x[f]||0),0);
+  const OK = O.filter(o=>(o.stato||'ok')==='ok'), np = OK.filter(o=>!o.pagato), nc = OK.filter(o=>!o.consegnato);
   $('osum').innerHTML = `<span>Da incassare: <b>${eur(sum(np,'euro'))}</b></span><span>Uova da consegnare: <b>${sum(nc,'uova')}</b></span>`;
   const V = O.filter(o => of==='np' ? !o.pagato : of==='nc' ? !o.consegnato : true).sort((a,b)=>b.data.localeCompare(a.data));
   const vis = allO ? V : V.slice(0,15);
   $('ords').innerHTML = vis.map(o=>`<div class="ord ${o.pagato&&o.consegnato?'done':''}">
-    <div><h3>${esc(o.nome)} ${esc(o.cognome)}</h3><div class="w">${o.perIl?`<b style="color:var(--brand)">per ${new Date(o.perIl+'T12:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'numeric'})}</b> · `:''}${dIt(o.data)} · ${o.uova} uova (${uovaTxt(o)})${o.telefono?` · <a href="tel:${esc(o.telefono)}" style="color:inherit">${esc(o.telefono)}</a>`:''}</div></div>
+    <div><h3>${esc(o.nome)} ${esc(o.cognome)}${o.stato==='attesa'?' <span style="font:700 .7rem Inter,sans-serif;padding:1px 8px;border-radius:99px;background:color-mix(in srgb,var(--yolk) 45%,var(--card));color:#6b4a00;vertical-align:2px">Da confermare</span>':''}</h3><div class="w">${o.perIl?`<b style="color:var(--brand)">per ${new Date(o.perIl+'T12:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'numeric'})}</b> · `:''}${dIt(o.data)} · ${o.uova} uova (${uovaTxt(o)})${o.telefono?` · <a href="tel:${esc(o.telefono)}" style="color:inherit">${esc(o.telefono)}</a>`:''}</div></div>
     <div class="e">${eur(o.euro)}</div>
     ${o.note?`<div class="nt">“${esc(o.note)}”</div>`:''}
     <div class="flags">
