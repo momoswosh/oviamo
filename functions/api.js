@@ -25,6 +25,12 @@ const today_ = () => romeParts().slice(0, 10);        // yyyy-MM-dd
 const newId = p => p + crypto.randomUUID().replace(/-/g, '').slice(0, 9);
 const clean = (s, n) => String(s == null ? '' : s).trim().slice(0, n);
 const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+const addDays = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const dIt = ymd => new Date(ymd + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'UTC' });
+// uova impegnate = solo le prenotazioni confermate (le richieste "in attesa" o "rifiutate" non contano)
+const BOOKED = "(SELECT COALESCE(SUM(uova),0) FROM orders WHERE COALESCE(stato,'ok') = 'ok')";
+const LOADED = '(SELECT COALESCE(SUM(uova),0) FROM loads)';
+const REMIND_DAYS = 3;   // promemoria Telegram per le richieste da confermare
 const all = async (db, sql, ...b) => (await db.prepare(sql).bind(...b).all()).results;
 
 /* ---------- dati ---------- */
@@ -32,7 +38,8 @@ const all = async (db, sql, ...b) => (await db.prepare(sql).bind(...b).all()).re
 const orders_ = async db => (await all(db, 'SELECT * FROM orders ORDER BY data')).map(r => ({
   id: r.id, data: r.data, nome: r.nome, cognome: r.cognome, telefono: r.telefono || '',
   q1: r.q1, q6: r.q6, uova: r.uova, euro: r.euro, note: r.note || '',
-  pagato: !!r.pagato, consegnato: !!r.consegnato, dataPag: r.data_pag || '', metodo: r.metodo || '', perIl: r.per_il || ''
+  pagato: !!r.pagato, consegnato: !!r.consegnato, dataPag: r.data_pag || '', metodo: r.metodo || '', perIl: r.per_il || '',
+  stato: r.stato || 'ok'
 }));
 const loads_ = db => all(db, 'SELECT id, data, uova, utente, note, ins FROM loads ORDER BY data, ins');
 const costs_ = db => all(db, 'SELECT id, data, descr, euro, utente, ins, qta, unita FROM costs ORDER BY data, ins');
@@ -43,7 +50,7 @@ async function userByToken(db, tk) {
   return tk.length >= 10 ? await db.prepare('SELECT tk, nome, ruolo FROM users WHERE tk = ?').bind(tk).first() : null;
 }
 async function available_(db) {
-  const r = await db.prepare('SELECT (SELECT COALESCE(SUM(uova),0) FROM loads) - (SELECT COALESCE(SUM(uova),0) FROM orders) AS n').first();
+  const r = await db.prepare(`SELECT ${LOADED} - ${BOOKED} AS n`).first();
   return Math.max(0, r.n || 0);
 }
 async function settings_(db) {
@@ -65,6 +72,20 @@ async function telegram(env, db, text) {
   catch (err) { return false; }
 }
 
+/** Promemoria: richieste in attesa con data entro REMIND_DAYS giorni (controllo al massimo una volta l'ora) */
+async function remind_(env, db) {
+  if (!env.TELEGRAM_TOKEN) return;
+  const now = Date.now(), last = await db.prepare("SELECT v FROM settings WHERE k = 'last_remind'").first();
+  if (last && now - (+last.v || 0) < 3600e3) return;
+  await db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('last_remind', ?)").bind(String(now)).run();
+  const L = await all(db, "SELECT id, nome, cognome, telefono, uova, per_il FROM orders WHERE stato = 'attesa' AND COALESCE(ricordato,0) = 0 AND per_il <> '' AND per_il <= ? ORDER BY per_il", addDays(today_(), REMIND_DAYS));
+  if (!L.length) return;
+  const ok = await telegram(env, db, '⏰ OviAmo – richieste da confermare\n' +
+    L.map(o => '• ' + dIt(o.per_il) + ': ' + o.nome + ' ' + o.cognome + ', ' + o.uova + ' uova' + (o.telefono ? ' (' + o.telefono + ')' : '')).join('\n') +
+    '\nUova disponibili ora: ' + await available_(db) + '\n' + SITE + '/report.html');
+  if (ok) await db.prepare(`UPDATE orders SET ricordato = 1 WHERE id IN (${L.map(() => '?').join(',')})`).bind(...L.map(o => o.id)).run();
+}
+
 /** Collega la chat: prende l'ultima persona che ha scritto al bot e le manda una conferma */
 async function tgLink_(db, env) {
   if (!env.TELEGRAM_TOKEN) return json({ ok: false, error: 'Manca il segreto TELEGRAM_TOKEN su Cloudflare' });
@@ -80,11 +101,12 @@ async function tgLink_(db, env) {
 
 /* ---------- GET ---------- */
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet({ request, env, waitUntil }) {
   const db = env.DB, p = Object.fromEntries(new URL(request.url).searchParams);
+  waitUntil(remind_(env, db).catch(() => {}));
   if (p.action === 'info') {
     const s = await settings_(db), left = await available_(db);
-    return json({ ok: true, open: s.open && left > 0, closedByHand: !s.open, available: left, msg: s.msg || DEFAULT_MSG, price1: PRICE_1, price6: PRICE_6 });
+    return json({ ok: true, open: s.open && left > 0, closedByHand: !s.open, available: left, msg: s.msg || DEFAULT_MSG, price1: PRICE_1, price6: PRICE_6, minData: addDays(today_(), 1) });
   }
   if (p.action === 'report') {
     if (!env.MASTER_KEY || p.key !== env.MASTER_KEY) return json({ ok: false, error: 'Password errata' });
@@ -136,6 +158,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       case 'delOrders': return await delOrders_(db, d);
       case 'settings': return await saveSettings_(db, d);
       case 'userSave': return await userSave_(db, d);
+      case 'decide': return await decide_(db, d);
       case 'tgLink': return await tgLink_(db, env);
       case 'tgTest': return json({ ok: await telegram(env, db, '🥚 OviAmo: messaggio di prova.') });
       case 'userDelete': await db.prepare('DELETE FROM users WHERE tk = ?').bind(String(d.tk)).run(); return json({ ok: true, users: await users_(db) });
@@ -157,6 +180,7 @@ async function order_(db, env, ctx, d) {
     if (prev) return json(JSON.parse(prev.res));
   }
   const s = await settings_(db), left = await available_(db);
+  if (d.tipo === 'data') return await request_(db, env, d, rid);
   if (!s.open || left <= 0) return json({ ok: false, closed: true, error: s.msg || DEFAULT_MSG });
 
   const nome = clean(d.nome, 60), cognome = clean(d.cognome, 60);
@@ -167,13 +191,13 @@ async function order_(db, env, ctx, d) {
   if (!uova) return json({ ok: false, error: 'Scegli almeno un uovo' });
   if (uova > left) return json({ ok: false, error: 'Sono rimaste solo ' + left + ' uova disponibili.' });
   const euro = Math.round((q1 * PRICE_1 + q6 * PRICE_6) * 100) / 100;
-  const perIl = isDate(d.perIl) && d.perIl >= today_() ? d.perIl : '';
+  const perIl = '';   // le prenotazioni "subito" non hanno data: per una data si usa la richiesta
   const telefono = clean(d.telefono, 30), note = clean(d.note, 500);
 
   // inserisce solo se le uova bastano ancora (evita di prenotare due volte le stesse)
   const r = await db.prepare(`INSERT INTO orders (id, data, nome, cognome, telefono, q1, q6, uova, euro, note, per_il)
     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-    WHERE (SELECT COALESCE(SUM(uova),0) FROM loads) - (SELECT COALESCE(SUM(uova),0) FROM orders) >= ?`)
+    WHERE ${LOADED} - ${BOOKED} >= ?`)
     .bind(newId('p'), now_(), nome, cognome, telefono, q1, q6, uova, euro, note, perIl, uova).run();
   if (!r.meta.changes) {
     const l2 = await available_(db);
@@ -190,6 +214,49 @@ async function order_(db, env, ctx, d) {
     (note ? '\nNote: ' + note : '') +
     '\nUova ancora disponibili: ' + (left - uova) + '\n' + SITE + '/report.html');
   return json(res);
+}
+
+/** Richiesta per una data futura: non impegna le uova, resta "in attesa" finché il gestore non conferma */
+async function request_(db, env, d, rid) {
+  const nome = clean(d.nome, 60), cognome = clean(d.cognome, 60), telefono = clean(d.telefono, 30), note = clean(d.note, 500);
+  if (!nome || !cognome) return json({ ok: false, error: 'Nome e cognome obbligatori' });
+  if (telefono.replace(/\D/g, '').length < 6) return json({ ok: false, error: 'Per le richieste con data serve il telefono: ti scriviamo per la conferma.' });
+  const minData = addDays(today_(), 1);
+  if (!isDate(d.perIl) || d.perIl < minData) return json({ ok: false, error: 'Scegli una data da domani in poi.' });
+  if (d.perIl > addDays(today_(), 90)) return json({ ok: false, error: 'Puoi chiedere al massimo per i prossimi 3 mesi.' });
+  const q1 = Math.max(0, Math.min(99, parseInt(d.q1, 10) || 0));
+  const q6 = Math.max(0, Math.min(50, parseInt(d.q6, 10) || 0));
+  const uova = q1 + 6 * q6;
+  if (!uova) return json({ ok: false, error: 'Scegli almeno un uovo' });
+  const euro = Math.round((q1 * PRICE_1 + q6 * PRICE_6) * 100) / 100;
+  await db.prepare(`INSERT INTO orders (id, data, nome, cognome, telefono, q1, q6, uova, euro, note, per_il, stato) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'attesa')`)
+    .bind(newId('p'), now_(), nome, cognome, telefono, q1, q6, uova, euro, note, d.perIl).run();
+  const res = { ok: true, richiesta: true, uova, euro, perIl: d.perIl };
+  if (rid) await db.prepare('INSERT OR REPLACE INTO idem (rid, res, ts) VALUES (?, ?, ?)').bind(rid, JSON.stringify(res), Date.now()).run();
+  await telegram(env, db, '📅 OviAmo – nuova richiesta da confermare\n' + nome + ' ' + cognome + ': ' + (uova === 1 ? '1 uovo' : uova + ' uova') +
+    ' per ' + dIt(d.perIl) + '\nTel: ' + telefono + (note ? '\nNote: ' + note : '') +
+    '\nUova disponibili ora: ' + await available_(db) + '\n' + SITE + '/report.html');
+  return json(res);
+}
+
+/** Conferma (stato 'ok', impegna le uova se bastano), rifiuta o rimette in attesa una richiesta */
+async function decide_(db, d) {
+  const id = String(d.id || ''), v = d.value;
+  if (!['ok', 'rifiutata', 'attesa'].includes(v)) return json({ ok: false, error: 'Valore non valido' });
+  let r;
+  if (v === 'ok') {
+    r = await db.prepare(`UPDATE orders SET stato = 'ok' WHERE id = ? AND stato <> 'ok' AND ${LOADED} - ${BOOKED} >= uova`).bind(id).run();
+    if (!r.meta.changes) {
+      const o = await db.prepare('SELECT uova, stato FROM orders WHERE id = ?').bind(id).first();
+      if (!o) return json({ ok: false, error: 'Richiesta non trovata' });
+      if (o.stato === 'ok') return json({ ok: true, already: true });
+      return json({ ok: false, error: 'Uova insufficienti: ne servono ' + o.uova + ', disponibili ' + await available_(db) + '. Carica prima le uova.' });
+    }
+  } else {
+    r = await db.prepare('UPDATE orders SET stato = ? WHERE id = ?').bind(v, id).run();
+    if (!r.meta.changes) return json({ ok: false, error: 'Richiesta non trovata' });
+  }
+  return json({ ok: true, available: await available_(db) });
 }
 
 async function addLoad_(db, d, u) {
