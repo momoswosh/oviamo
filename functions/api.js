@@ -31,6 +31,7 @@ const dIt = ymd => new Date(ymd + 'T12:00:00Z').toLocaleDateString('it-IT', { we
 const BOOKED = "(SELECT COALESCE(SUM(uova),0) FROM orders WHERE COALESCE(stato,'ok') = 'ok')";
 const LOADED = '(SELECT COALESCE(SUM(uova),0) FROM loads)';
 const REMIND_DAYS = 3;   // promemoria Telegram per le richieste da confermare
+const WA_MSG = 'Ciao, se vuoi ci sono {uova} uova disponibili';   // testo predefinito "Avvisa su WhatsApp"
 const all = async (db, sql, ...b) => (await db.prepare(sql).bind(...b).all()).results;
 
 /* ---------- dati ---------- */
@@ -56,6 +57,11 @@ async function available_(db) {
 async function settings_(db) {
   const s = {}; (await all(db, 'SELECT k, v FROM settings')).forEach(r => s[r.k] = r.v);
   return { open: s.open !== '0', msg: s.msg || '' };
+}
+const contacts_ = db => all(db, 'SELECT id, nome, tel FROM contacts ORDER BY nome COLLATE NOCASE');
+async function waMsg_(db) {
+  const r = await db.prepare("SELECT v FROM settings WHERE k = 'wa_msg'").first();
+  return (r && r.v) || WA_MSG;
 }
 
 /* ---------- avvisi (Telegram) ---------- */
@@ -118,13 +124,13 @@ export async function onRequestGet({ request, env, waitUntil }) {
   }
   if (p.action === 'report') {
     if (!env.MASTER_KEY || p.key !== env.MASTER_KEY) return json({ ok: false, error: 'Password errata' });
-    const [orders, loads, costs, hens, users, settings, available] = await Promise.all([orders_(db), loads_(db), costs_(db), hens_(db), users_(db), settings_(db), available_(db)]);
-    return json({ ok: true, orders, loads, costs, hens, users, settings, available });
+    const [orders, loads, costs, hens, users, settings, available, contacts, waMsg] = await Promise.all([orders_(db), loads_(db), costs_(db), hens_(db), users_(db), settings_(db), available_(db), contacts_(db), waMsg_(db)]);
+    return json({ ok: true, orders, loads, costs, hens, users, settings, available, contacts, waMsg });
   }
   if (p.action === 'area') {
     const u = await userByToken(db, p.t);
     if (!u) return json({ ok: false, error: 'Link non valido. Chiedi un nuovo link a chi gestisce OviAmo.' });
-    const out = { ok: true, nome: u.nome, ruolo: u.ruolo, available: await available_(db) };
+    const out = { ok: true, nome: u.nome, ruolo: u.ruolo, available: await available_(db), contacts: await contacts_(db), waMsg: await waMsg_(db) };
     const loads = await loads_(db);
     if (u.ruolo === 'intermedio') {
       out.loads = loads; out.costs = await costs_(db); out.hens = await hens_(db);
@@ -160,6 +166,13 @@ export async function onRequestPost({ request, env, waitUntil }) {
       case 'hens': if (!canCost) break; return await addHens_(db, d, u);
       case 'delHens': if (!canCost) break; return await delEntry_(db, 'hens', d.id, u, master);
       case 'flag': if (!canCost) break; return await flag_(db, d);
+      case 'contactSave': return await contactSave_(db, d);
+      case 'contactDel': await db.prepare('DELETE FROM contacts WHERE id = ?').bind(String(d.id)).run(); return json({ ok: true, contacts: await contacts_(db) });
+      case 'waMsg': {
+        const t = clean(d.testo, 500);
+        await db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('wa_msg', ?)").bind(t).run();
+        return json({ ok: true, waMsg: t || WA_MSG });
+      }
     }
     if (!master) return json({ ok: false, error: 'Operazione non consentita' });
     switch (d.action) {
@@ -357,4 +370,14 @@ async function userSave_(db, d) {
       .bind(crypto.randomUUID().replace(/-/g, '').slice(0, 16), nome, ruolo, today_()).run();
   }
   return json({ ok: true, users: await users_(db) });
+}
+
+/** Rubrica "Avvisa su WhatsApp": aggiunge (o aggiorna, se d.id) una persona */
+async function contactSave_(db, d) {
+  const nome = clean(d.nome, 60), tel = clean(d.tel, 30);
+  if (!nome) return json({ ok: false, error: 'Scrivi il nome' });
+  if (tel.replace(/\D/g, '').length < 8) return json({ ok: false, error: 'Controlla il numero di telefono' });
+  if (d.id) await db.prepare('UPDATE contacts SET nome = ?, tel = ? WHERE id = ?').bind(nome, tel, String(d.id)).run();
+  else await db.prepare('INSERT INTO contacts (id, nome, tel) VALUES (?, ?, ?)').bind(newId('r'), nome, tel).run();
+  return json({ ok: true, contacts: await contacts_(db) });
 }
