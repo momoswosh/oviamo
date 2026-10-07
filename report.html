@@ -163,6 +163,8 @@ tr.rej td{opacity:.5}tr.rej b{text-decoration:line-through}
       <p class="hint">Per cambiare chat o usare un gruppo: aggiungi @oviamo_bot al gruppo, scrivi <b>/start@oviamo_bot</b> nel gruppo, poi premi "Collega l'ultima chat".</p>
     </section>
 
+    <section class="card" id="waCard" hidden></section>
+
     <section class="card">
       <nav class="tabs" id="tabs">
         <button data-t="pren" class="on">Prenotazioni<span class="c" id="cPren">0</span></button>
@@ -264,6 +266,7 @@ tr.rej td{opacity:.5}tr.rej b{text-decoration:line-through}
 <div class="toast" id="toast"></div>
 
 <script src="grafico.js"></script>
+<script src="avvisa.js"></script>
 <script>
 const SCRIPT_URL = '/api';   // motore su Cloudflare (functions/api.js)
 const SITE = location.origin.startsWith('http') ? location.origin : 'https://oviamo.boneggio.it';
@@ -281,6 +284,7 @@ let KEY = store.get('ovk') || '', D = null, chart = null, tab = 'pren', pf = '',
 
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2400); }
 const post = body => fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:KEY,...body})}).then(r=>r.json());
+const WA = OviAvvisa($('waCard'), post);
 const dShort = s => new Date(s+'T12:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'numeric'});
 let calM = null, calSel = '';
 const stBadge = o => o.stato==='attesa' ? '<span class="stb att">Da confermare</span>' : o.stato==='rifiutata' ? '<span class="stb rej">Rifiutata</span>' : '';
@@ -326,6 +330,7 @@ function render(){
     ['Margine', `<span class="${inc-costi<0?'neg':''}">${eur(inc-costi)}</span>`]
   ].map(([l,v,c,x])=>`<div class="card kpi ${c||''}"><small>${l}</small><b>${v}</b>${x||''}</div>`).join('');
 
+  WA.update(D);
   $('open').checked = D.settings.open; $('msg').value = D.settings.msg || '';
   $('openL').textContent = D.settings.open ? 'Prenotazioni aperte' : 'Prenotazioni chiuse';
   $('setHint').textContent = !D.settings.open ? 'La pagina mostra il messaggio di chiusura.'
