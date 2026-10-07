@@ -109,6 +109,8 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
     <button class="more" id="lmore" hidden>Mostra tutti</button>
   </section>
 
+  <section class="card" id="waCard" hidden></section>
+
   <section class="card" id="henCard" hidden>
     <h2>🐔 Galline nel pollaio</h2>
     <div class="osum" id="hnow"></div>
@@ -163,6 +165,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:10px}
 <div class="toast" id="toast"></div>
 
 <script src="grafico.js"></script>
+<script src="avvisa.js"></script>
 <script>
 const SCRIPT_URL = '/api';   // motore su Cloudflare (functions/api.js)
 const $ = id => document.getElementById(id);
@@ -176,6 +179,7 @@ let D = null, chart = null, allL = false, allC = false, allO = false, of = 'np';
 
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2400); }
 const post = body => fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({t:TK,...body})}).then(r=>r.json());
+const WA = OviAvvisa($('waCard'), post);
 
 async function load(){
   try{
@@ -191,6 +195,7 @@ function render(){
   $('title').textContent = 'Ciao ' + String(D.nome).split(' ')[0] + '!';
   $('badge').textContent = inter ? 'Uova, costi e grafico' : 'Carico uova';
   $('avail').textContent = D.available; $('availBox').hidden = false;
+  WA.update(D);
   $('loadCard').hidden = false;
   $('lTitle').textContent = inter ? 'Ultimi carichi (di tutti)' : 'I tuoi ultimi carichi';
   const L = [...D.loads].sort((a,b)=>(b.data+b.ins).localeCompare(a.data+a.ins));
