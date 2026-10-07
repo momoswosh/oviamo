@@ -68,7 +68,15 @@ async function telegram(env, db, text) {
   if (!env.TELEGRAM_TOKEN) return false;
   const c = await db.prepare("SELECT v FROM settings WHERE k = 'tg_chat'").first();
   if (!c || !c.v) return false;
-  try { return (await tgApi(env, 'sendMessage', { chat_id: c.v, text, disable_web_page_preview: true })).ok; }
+  try {
+    let r = await tgApi(env, 'sendMessage', { chat_id: c.v, text, disable_web_page_preview: true });
+    const nuovo = r.parameters && r.parameters.migrate_to_chat_id;   // il gruppo è diventato "supergruppo": nuovo id
+    if (!r.ok && nuovo) {
+      await db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('tg_chat', ?)").bind(String(nuovo)).run();
+      r = await tgApi(env, 'sendMessage', { chat_id: nuovo, text, disable_web_page_preview: true });
+    }
+    return r.ok;
+  }
   catch (err) { return false; }
 }
 
@@ -91,11 +99,11 @@ async function tgLink_(db, env) {
   if (!env.TELEGRAM_TOKEN) return json({ ok: false, error: 'Manca il segreto TELEGRAM_TOKEN su Cloudflare' });
   const up = await tgApi(env, 'getUpdates', { limit: 100 });
   if (!up.ok) return json({ ok: false, error: 'Telegram: ' + (up.description || 'token non valido') });
-  const msgs = (up.result || []).map(u => u.message || u.edited_message || u.my_chat_member).filter(m => m && m.chat);
+  const msgs = (up.result || []).map(u => u.message || u.edited_message || u.my_chat_member).filter(m => m && m.chat && !(m.new_chat_member && m.new_chat_member.status === 'left'));
   if (!msgs.length) return json({ ok: false, error: 'Scrivi prima un messaggio al bot su Telegram (es. "ciao"), poi riprova.' });
   const chat = msgs[msgs.length - 1].chat;
   await db.prepare("INSERT OR REPLACE INTO settings (k, v) VALUES ('tg_chat', ?)").bind(String(chat.id)).run();
-  const sent = await tgApi(env, 'sendMessage', { chat_id: chat.id, text: '🥚 OviAmo collegato! Qui riceverai un messaggio per ogni nuova prenotazione.' });
+  const sent = await tgApi(env, 'sendMessage', { chat_id: chat.id, text: '🥚 OviAmo collegato! ' + (chat.type === 'private' ? 'Qui riceverai' : 'In questo gruppo arriverà') + ' un messaggio per ogni nuova prenotazione e richiesta.' });
   return json({ ok: !!sent.ok, chat: chat.first_name || chat.title || '', error: sent.ok ? undefined : sent.description });
 }
 
