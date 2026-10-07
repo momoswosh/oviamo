@@ -155,6 +155,12 @@ tr.rej td{opacity:.5}tr.rej b{text-decoration:line-through}
         <button class="btn" id="saveSet">Salva</button>
       </div>
       <p class="hint" id="setHint"></p>
+      <div class="set" style="margin-top:12px">
+        <span>🔔 <b>Avvisi Telegram</b></span>
+        <button class="btn ghost" id="tgLink">Collega l'ultima chat</button>
+        <button class="btn ghost" id="tgTest">Messaggio di prova</button>
+      </div>
+      <p class="hint">Per cambiare chat o usare un gruppo: aggiungi @oviamo_bot al gruppo, scrivi <b>/start@oviamo_bot</b> nel gruppo, poi premi "Collega l'ultima chat".</p>
     </section>
 
     <section class="card">
@@ -428,6 +434,13 @@ $('saveSet').onclick = async () => {
     D.settings = j.settings; render(); toast('Salvato'); }catch(x){ toast(x.message||'Errore'); }
 };
 $('open').onchange = () => $('saveSet').click();
+$('tgLink').onclick = async () => {
+  if(!confirm("Gli avvisi andranno all'ultima chat che ha scritto a @oviamo_bot. Continuo?")) return;
+  try{ const j = await post({action:'tgLink'}); if(!j.ok) throw new Error(j.error); toast('Collegato a: ' + (j.chat || 'chat')); }catch(x){ toast(x.message||'Errore'); }
+};
+$('tgTest').onclick = async () => {
+  try{ const j = await post({action:'tgTest'}); toast(j.ok ? 'Messaggio inviato' : 'Invio non riuscito: collega prima una chat'); }catch(x){ toast(x.message||'Errore'); }
+};
 
 document.addEventListener('change', async e => {
   const t = e.target;
